@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ambient Shield — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #070b12;
+      --bg2:     #0c1220;
+      --bg3:     #111827;
+      --bg4:     #1a2440;
+      --border:  rgba(255,255,255,0.06);
+      --border2: rgba(255,255,255,0.11);
+      --text:    #e2eeff;
+      --text2:   rgba(180,210,255,0.6);
+      --text3:   rgba(180,210,255,0.35);
+      --accent:  #5b9cf6;
+      --accent2: #7ab3ff;
+      --safe:    #3ecf8e;
+      --caution: #f5a623;
+      --danger:  #ff4d6d;
+      --radius:  12px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Glow blobs ── */
+    .glow { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+    .glow-1 { width: 700px; height: 700px; background: rgba(91,156,246,0.07); top: -200px; left: 50%; transform: translateX(-50%); }
+    .glow-2 { width: 400px; height: 400px; background: rgba(62,207,142,0.05); bottom: 0; right: -100px; }
+
+    /* ── Navbar ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,11,18,0.85);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(91,156,246,0.2), rgba(58,123,213,0.1));
+      border: 1px solid rgba(91,156,246,0.3);
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+      box-shadow: 0 0 16px rgba(91,156,246,0.2);
+    }
+    .logo-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: var(--text); }
+    .nav-status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--safe); font-weight: 500; }
+    .nav-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--safe); box-shadow: 0 0 8px rgba(62,207,142,0.8); animation: pulse 2.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px rgba(62,207,142,0.8)} 50%{opacity:0.5;box-shadow:0 0 3px rgba(62,207,142,0.3)} }
+
+    /* ── Hero ── */
+    .hero { text-align: center; padding: 64px 24px 48px; position: relative; z-index: 1; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px;
+      padding: 5px 14px; border-radius: 100px;
+      border: 1px solid rgba(91,156,246,0.25); background: rgba(91,156,246,0.08);
+      color: var(--accent); font-size: 12px; font-weight: 500;
+    }
+    .hero h1 {
+      font-family: 'Syne', sans-serif; font-size: clamp(36px, 5vw, 60px);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 16px;
+    }
+    .hero h1 span { background: linear-gradient(135deg, var(--accent), #a5c8ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { color: var(--text2); font-size: 17px; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+
+    /* ── Tool tabs ── */
+    .tabs-wrapper { max-width: 900px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .tabs {
+      display: flex; gap: 4px; padding: 5px;
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 16px; border: none; border-radius: 10px;
+      background: transparent; color: var(--text2); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+    .tab-btn.active { background: var(--bg4); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    .tab-icon { font-size: 15px; }
+
+    /* ── Tool panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .tool-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; display: flex; flex-direction: column; gap: 18px;
+    }
+    .tool-header { display: flex; flex-direction: column; gap: 6px; }
+    .tool-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+    .tool-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); }
+    .tool-desc { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+    textarea, input[type="text"], input[type="url"] {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px;
+      padding: 12px 14px; outline: none; resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,156,246,0.12); }
+    textarea { min-height: 160px; line-height: 1.6; }
+    input::placeholder, textarea::placeholder { color: var(--text3); }
+
+    .input-row { display: flex; gap: 10px; align-items: flex-start; }
+    .input-row input { flex: 1; }
+
+    /* File upload */
+    .file-drop {
+      border: 2px dashed var(--border2); border-radius: 12px;
+      padding: 36px 20px; text-align: center; cursor: pointer;
+      transition: all 0.2s; background: var(--bg3);
+    }
+    .file-drop:hover, .file-drop.drag { border-color: var(--accent); background: rgba(91,156,246,0.06); }
+    .file-drop-icon { font-size: 32px; margin-bottom: 10px; }
+    .file-drop-text { font-size: 14px; color: var(--text2); margin-bottom: 4px; }
+    .file-drop-hint { font-size: 12px; color: var(--text3); }
+    .file-drop input[type="file"] { display: none; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 12px 24px; border-radius: 10px; border: none;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.18s; font-family: inherit; letter-spacing: -0.1px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+    .btn-primary {
+      background: linear-gradient(135deg, #1e4bb8, #5b9cf6);
+      color: #fff; box-shadow: 0 2px 18px rgba(91,156,246,0.3); width: 100%;
+    }
+    .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #2454cc, #6fabf8); box-shadow: 0 4px 24px rgba(91,156,246,0.45); }
+    .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
+    .btn-secondary:hover:not(:disabled) { background: var(--bg4); }
+
+    /* Results */
+    .result-area { display: none; flex-direction: column; gap: 16px; }
+    .result-area.show { display: flex; }
+
+    .result-card {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .risk-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 700;
+    }
+    .risk-badge.safe   { background: rgba(62,207,142,0.15); color: var(--safe);    border: 1px solid rgba(62,207,142,0.3); }
+    .risk-badge.caution{ background: rgba(245,166,35,0.15);  color: var(--caution); border: 1px solid rgba(245,166,35,0.3); }
+    .risk-badge.danger { background: rgba(255,77,109,0.15);  color: var(--danger);  border: 1px solid rgba(255,77,109,0.3); }
+    .risk-badge.loading{ background: rgba(91,156,246,0.12); color: var(--accent);  border: 1px solid rgba(91,156,246,0.25); }
+
+    .risk-score { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
+    .risk-score.safe    { color: var(--safe); }
+    .risk-score.caution { color: var(--caution); }
+    .risk-score.danger  { color: var(--danger); }
+
+    .risk-bar-wrap { height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+    .risk-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .risk-bar.safe    { background: var(--safe); }
+    .risk-bar.caution { background: var(--caution); }
+    .risk-bar.danger  { background: var(--danger); }
+
+    .result-summary { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+    .flags { display: flex; flex-direction: column; gap: 8px; }
+    .flag { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--text2); line-height: 1.5; }
+    .flag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+
+    .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 700; }
+
+    /* Loading spinner */
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-card {
+      background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3);
+      border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #ff8099;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+
+    /* Image preview */
+    .img-preview { display: none; border-radius: 10px; overflow: hidden; max-height: 240px; }
+    .img-preview img { width: 100%; height: 100%; object-fit: contain; max-height: 240px; background: var(--bg3); }
+    .img-preview.show { display: block; }
+
+    /* Separators */
+    .divider { height: 1px; background: var(--border); }
+
+    /* Legend */
+    .legend { display: flex; gap: 20px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .verdict-box {
+      background: var(--bg4); border-radius: 8px; padding: 12px 14px;
+      font-size: 13px; color: var(--text2); border: 1px solid var(--border);
+      line-height: 1.6;
+    }
+    .verdict-box strong { color: var(--text); }
+
+    /* Footer */
+    footer {
+      text-align: center; padding: 28px 24px;
+      border-top: 1px solid var(--border); margin-top: 60px;
+      font-size: 12px; color: var(--text3);
+      position: relative; z-index: 1;
+    }
+
+    @media (max-width: 600px) {
+      .tab-btn span { display: none; }
+      .hero { padding: 40px 16px 32px; }
+      .tool-card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background glows -->
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="dashboard.html">
+        <div class="logo-icon">🛡️</div>
+        <span class="logo-name">Ambient Shield</span>
+      </a>
+      <div class="nav-status">
+        <div class="nav-dot"></div>
+        Active &amp; Protecting
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">🛡️ Your Quiet Digital Protector</div>
+    <h1>Ambient <span>Shield</span></h1>
+    <p>Analyze privacy policies, detect misinformation, and spot deepfakes — all powered by Gemini AI, all running locally in your browser.</p>
+  </div>
+
+  <!-- Tool tabs -->
+  <div class="tabs-wrapper">
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="policy" role="tab" aria-selected="true">
+        <span class="tab-icon">📄</span><span>Policy Scanner</span>
+      </button>
+      <button class="tab-btn" data-tab="factcheck" role="tab">
+        <span class="tab-icon">✅</span><span>Fact Checker</span>
+      </button>
+      <button class="tab-btn" data-tab="deepfake" role="tab">
+        <span class="tab-icon">🖼️</span><span>Deepfake Detector</span>
+      </button>
+      <button class="tab-btn" data-tab="settings" role="tab">
+        <span class="tab-icon">⚙️</span><span>Settings</span>
+      </button>
+    </div>
+
+    <!-- ── POLICY SCANNER ── -->
+    <div class="panel active" id="panel-policy">
+      <div class="tool-card">
+        <div class="tool-header">
+          <span class="tool-label" style="color:var(--accent)">Privacy Policy Analyzer</span>
+          <div class="tool-title">What Does This Policy <span style="background:linear-gradient(135deg,var(--accent),#a5c8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Actually Mean?</span></div>
+          <p class="tool-desc">Right-click any privacy page and choose "Analyze Privacy Policy" — or paste text below. In seconds you'll know <em>what they collect</em>, <em>who they sell it to</em>, <em>your rights</em>, and <em>simple opt-out steps</em>. No legalese.</p>
+        </div>
+
+        <!-- Source badge (hidden until auto-loaded) -->
+        <div id="policy-source-banner" style="display:none;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:rgba(91,156,246,0.08);border:1px solid rgba(91,156,246,0.2);font-size:13px;color:var(--accent)">
+          <span style="font-size:16px">📄</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600" id="policy-source-title"></div>
+            <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="policy-source-url"></div>
+          </div>
+          <span id="policy-source-chip" style="padding:3px 10px;border-radius:100px;background:rgba(91,156,246,0.15);font-size:11px;font-weight:700">Auto-loaded</span>
+        </div>
+
+        <textarea id="policy-input" placeholder="Paste any privacy policy or terms of service text here…&#10;&#10;Or right-click on any privacy policy page → 🛡️ Analyze Privacy Policy" rows="7"></textarea>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="btn-policy" style="flex:1">
+            🔍 Analyze Policy
+          </button>
+          <button class="btn btn-secondary" id="btn-policy-clear" title="Clear and start fresh" style="padding:12px 16px">
+            ✕
+          </button>
+        </div>
+
+        <div class="result-area" id="policy-result"></div>
+      </div>
+    </div>
+
+    <!-- ── FACT CHECKER ── -->
+    <div class="panel" id="panel-factcheck">
+      <div class="tool-card">
+        <div class="tool-header">
+          <span class="tool-label" style="color:var(--safe)">Fact Checker</span>
+          <div class="tool-title">Misinformation Scanner</div>
+          <p class="tool-desc">Paste a headline, social media post, or article claim. Ambient Shield will assess its credibility and flag potential misinformation patterns.</p>
+        </div>
+
+        <textarea id="factcheck-input" placeholder="Paste the text, headline, or claim you want to verify…" rows="6"></textarea>
+
+        <button class="btn btn-primary" id="btn-factcheck" style="background:linear-gradient(135deg,#0e7a4a,#3ecf8e);box-shadow:0 2px 18px rgba(62,207,142,0.3)">
+          ✅ Check Facts
+        </button>
+
+        <div class="result-area" id="factcheck-result"></div>
+      </div>
+    </div>
+
+    <!-- ── DEEPFAKE DETECTOR ── -->
+    <div class="panel" id="panel-deepfake">
+      <div class="tool-card">
+        <div class="tool-header">
+          <span class="tool-label" style="color:var(--caution)">Image AI</span>
+          <div class="tool-title">Deepfake Detector</div>
+          <p class="tool-desc">Upload an image or enter a URL. Ambient Shield analyzes it for signs of AI manipulation, digital forgery, and authenticity anomalies.</p>
+        </div>
+
+        <div class="file-drop" id="file-drop">
+          <div class="file-drop-icon">📷</div>
+          <p class="file-drop-text">Click to upload or drag &amp; drop an image</p>
+          <p class="file-drop-hint">PNG, JPG, WebP, GIF — max 10 MB</p>
+          <input type="file" id="img-file" accept="image/*" />
+        </div>
+
+        <div class="img-preview" id="img-preview">
+          <img id="img-preview-el" src="" alt="Preview" />
+        </div>
+
+        <div style="text-align:center;font-size:12px;color:var(--text3);margin:-8px 0">— or enter image URL —</div>
+
+        <div class="input-row">
+          <input type="url" id="img-url" placeholder="https://example.com/image.jpg" />
+          <button class="btn btn-secondary" id="btn-load-url">Load</button>
+        </div>
+
+        <button class="btn btn-primary" id="btn-deepfake" style="background:linear-gradient(135deg,#7a4800,#f5a623);box-shadow:0 2px 18px rgba(245,166,35,0.3)">
+          🖼️ Analyze Image
+        </button>
+
+        <div class="result-area" id="deepfake-result"></div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="panel" id="panel-settings">
+      <div class="tool-card">
+        <div class="tool-header">
+          <span class="tool-label" style="color:var(--text2)">Preferences</span>
+          <div class="tool-title">API Configuration</div>
+          <p class="tool-desc">Update your Gemini API key to restore service. You can get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);text-decoration:none">Google AI Studio</a>.</p>
+        </div>
+        
+        <div class="input-row">
+          <input type="password" id="api-key-input" placeholder="Paste new Gemini API Key here (AIzaSy...)" />
+          <button class="btn btn-secondary" id="btn-save-key">Save Key</button>
+        </div>
+        <div id="settings-result" style="font-size:13px;color:var(--safe);display:none;margin-top:4px">✅ API Key saved successfully!</div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="padding:20px 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:relative;z-index:1;">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--safe)"></div>Safe</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--caution)"></div>Caution</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>Danger</div>
+      </div>
+      <span style="font-size:12px;color:var(--text3)">Powered by Gemini AI • Privacy-first</span>
+    </div>
+  </div>
+
+  <footer>
+    © 2026 Ambient Shield &nbsp;·&nbsp; No data stored &nbsp;·&nbsp; No signup required &nbsp;·&nbsp; Free forever
+  </footer>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"deprecated":true,"message":"This API route is inactive. Policy analysis runs via the extension background.js service worker.","bridge":"chrome.runtime.sendMessage({ action: 'SCAN_POLICY', ... })"}

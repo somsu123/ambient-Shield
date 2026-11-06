@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔒 Access Blocked — Ambient Shield</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080c14;
+      color: #dce8f8;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+    }
+    .container { text-align: center; max-width: 480px; width: 100%; }
+
+    .shield-anim {
+      font-size: 80px; margin-bottom: 24px;
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 24px rgba(255,77,109,0.5));
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+
+    h1 {
+      font-size: 26px; font-weight: 800;
+      color: #ff4d6d; margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 15px; color: rgba(180,200,230,0.7);
+      line-height: 1.7; margin-bottom: 24px;
+    }
+
+    .blocked-url {
+      background: #0e1520;
+      border: 1px solid rgba(255,77,109,0.35);
+      border-radius: 12px; padding: 12px 20px;
+      font-size: 13px; color: #ff6b84;
+      word-break: break-all;
+      margin-bottom: 28px;
+      font-family: monospace;
+    }
+
+    .info-box {
+      background: rgba(91,156,246,0.07);
+      border: 1px solid rgba(91,156,246,0.2);
+      border-radius: 12px; padding: 16px 20px;
+      font-size: 13px; color: rgba(180,200,230,0.6);
+      line-height: 1.7;
+    }
+    .info-box strong { color: #5b9cf6; }
+
+    .go-back {
+      display: inline-block; margin-top: 20px;
+      padding: 10px 24px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(180,200,230,0.7); font-size: 13px;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.15s;
+    }
+    .go-back:hover { background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="shield-anim">🛡️</div>
+    <h1>Access Blocked</h1>
+    <p class="subtitle">
+      This URL is not allowed in <strong style="color:#ff4d6d">Parental / Work Mode</strong>.<br/>
+      Only whitelisted websites are accessible right now.
+    </p>
+    <div class="blocked-url" id="blocked-url">Loading…</div>
+    <div class="info-box">
+      To access this site, open the <strong>Ambient Shield</strong> extension,<br/>
+      click the <strong>Parental / Work Mode</strong> toggle, and enter<br/>
+      the password to disable the mode.
+    </div>
+    <a class="go-back" onclick="history.back()">← Go Back</a>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const url    = params.get("url") || "Unknown URL";
+    document.getElementById("blocked-url").textContent = url;
+  </script>
+</body>
+</html>

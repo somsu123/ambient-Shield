@@ -1,0 +1,93 @@
+﻿{
+    "manifest_version":  3,
+    "name":  "Ambient Shield",
+    "version":  "1.0.0",
+    "description":  "Your quiet digital protector against privacy traps, misinformation, and adult content",
+    "permissions":  [
+                        "activeTab",
+                        "contextMenus",
+                        "storage",
+                        "tabs",
+                        "scripting",
+                        "webNavigation",
+                        "declarativeNetRequest"
+                    ],
+    "host_permissions":  [
+                             "\u003call_urls\u003e",
+                             "https://generativelanguage.googleapis.com/*"
+                         ],
+    "declarative_net_request":  {
+                                    "rule_resources":  [
+                                                           {
+                                                               "id":  "adult-block-rules",
+                                                               "enabled":  true,
+                                                               "path":  "block-rules.json"
+                                                           }
+                                                       ]
+                                },
+    "background":  {
+                       "service_worker":  "background.js"
+                   },
+    "content_scripts":  [
+                            {
+                                "matches":  [
+                                                "\u003call_urls\u003e"
+                                            ],
+                                "js":  [
+                                           "content-firewall.js"
+                                       ],
+                                "css":  [
+                                            "content-firewall.css"
+                                        ],
+                                "run_at":  "document_start"
+                            },
+                            {
+                                "matches":  [
+                                                "\u003call_urls\u003e"
+                                            ],
+                                "js":  [
+                                           "content.js"
+                                       ],
+                                "css":  [
+                                            "content.css"
+                                        ],
+                                "run_at":  "document_idle"
+                            }
+                        ],
+    "action":  {
+                   "default_popup":  "popup.html",
+                   "default_icon":  {
+                                        "16":  "icon16.svg",
+                                        "48":  "icon48.svg",
+                                        "128":  "icon128.svg"
+                                    }
+               },
+    "icons":  {
+                  "16":  "icon16.svg",
+                  "48":  "icon48.svg",
+                  "128":  "icon128.svg"
+              },
+    "web_accessible_resources":  [
+                                     {
+                                         "resources":  [
+                                                           "dashboard.html",
+                                                           "blocked.html",
+                                                           "index.html",
+                                                           "analyze/index.html",
+                                                           "settings/index.html",
+                                                           "next_assets/*",
+                                                           "*.js",
+                                                           "*.css",
+                                                           "*.svg",
+                                                           "*.png",
+                                                           "*.ico"
+                                                       ],
+                                         "matches":  [
+                                                         "\u003call_urls\u003e"
+                                                     ]
+                                     }
+                                 ],
+    "content_security_policy":  {
+                                    "extension_pages":  "script-src \u0027self\u0027 \u0027wasm-unsafe-eval\u0027; object-src \u0027self\u0027"
+                                }
+}

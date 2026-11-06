@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1520"/>
+      <stop offset="100%" stop-color="#1a2540"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5b9cf6"/>
+      <stop offset="100%" stop-color="#3a7bd5"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="62" fill="url(#bg)" stroke="#1e3a5f" stroke-width="2"/>
+  <!-- Shield body -->
+  <path d="M64 18 L100 33 L100 64 C100 84 84 100 64 108 C44 100 28 84 28 64 L28 33 Z"
+        fill="url(#shield)" filter="url(#glow)" opacity="0.9"/>
+  <!-- Shield inner rim -->
+  <path d="M64 18 L100 33 L100 64 C100 84 84 100 64 108 C44 100 28 84 28 64 L28 33 Z"
+        fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+  <!-- Checkmark -->
+  <path d="M44 64 L57 77 L84 50" stroke="white" stroke-width="7"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

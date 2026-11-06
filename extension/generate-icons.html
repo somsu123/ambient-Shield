@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ambient Shield — Generate Icons</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 32px; background: #080c14; color: #dce8f8; }
+    h1 { margin-bottom: 8px; font-size: 22px; }
+    p  { color: rgba(180,200,230,0.55); margin-bottom: 24px; font-size: 14px; }
+    .grid { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 32px; }
+    .item { text-align: center; }
+    .label { font-size: 12px; color: rgba(180,200,230,0.4); margin-top: 8px; }
+    .download-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    a.dl {
+      display: inline-block;
+      padding: 9px 18px;
+      border-radius: 9px;
+      background: #5b9cf6;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    a.dl:hover { background: #4a8de0; }
+    .note { margin-top: 24px; padding: 14px 18px; background: #151e2e; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px; font-size: 13px; color: rgba(180,200,230,0.55); line-height: 1.6; }
+    code { background: #1a2540; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Ambient Shield — Icon Generator</h1>
+  <p>Click each download link to save the PNG icon. Move all three icons into the <code>extension/</code> folder.</p>
+
+  <div class="grid" id="previews"></div>
+  <div class="download-row" id="downloads"></div>
+
+  <div class="note">
+    <strong>Steps:</strong><br/>
+    1. Open this file in Chrome (File → Open File)<br/>
+    2. Download all three icons below<br/>
+    3. Save them as <code>icon16.png</code>, <code>icon48.png</code>, <code>icon128.png</code> in the <code>extension/</code> folder<br/>
+    4. Load the extension in <code>chrome://extensions</code> → Developer mode → Load unpacked → select <code>extension/</code>
+  </div>
+
+  <script>
+    const SIZES = [16, 48, 128];
+
+    function drawShieldIcon(canvas) {
+      const s  = canvas.width;
+      const cx = s / 2;
+      const ctx = canvas.getContext("2d");
+
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, s, s);
+      grad.addColorStop(0, "#0e1520");
+      grad.addColorStop(1, "#151e2e");
+      ctx.fillStyle = grad;
+      ctx.roundRect(0, 0, s, s, s * 0.15);
+      ctx.fill();
+
+      // Glow
+      const glow = ctx.createRadialGradient(cx, cx * 0.9, 0, cx, cx * 0.9, s * 0.55);
+      glow.addColorStop(0, "rgba(91,156,246,0.22)");
+      glow.addColorStop(1, "rgba(91,156,246,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, s, s);
+
+      // Shield shape
+      const p  = s * 0.12;  // padding
+      const sw = s - p * 2; // shield width
+      const sh = s - p * 2; // shield height
+
+      ctx.save();
+      ctx.translate(p, p);
+
+      ctx.beginPath();
+      ctx.moveTo(sw / 2, 0);
+      ctx.lineTo(sw, sh * 0.22);
+      ctx.lineTo(sw, sh * 0.55);
+      ctx.quadraticCurveTo(sw, sh * 0.85, sw / 2, sh);
+      ctx.quadraticCurveTo(0, sh * 0.85, 0, sh * 0.55);
+      ctx.lineTo(0, sh * 0.22);
+      ctx.closePath();
+
+      // Shield gradient fill
+      const sfill = ctx.createLinearGradient(0, 0, 0, sh);
+      sfill.addColorStop(0, "#5b9cf6");
+      sfill.addColorStop(1, "#3a7bd5");
+      ctx.fillStyle = sfill;
+      ctx.fill();
+
+      // Shield inner highlight
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth   = Math.max(1, s * 0.025);
+      ctx.stroke();
+
+      // Checkmark (for sizes ≥ 48 only)
+      if (s >= 48) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth   = Math.max(2, s * 0.065);
+        ctx.lineCap     = "round";
+        ctx.lineJoin    = "round";
+        ctx.beginPath();
+        ctx.moveTo(sw * 0.27, sh * 0.52);
+        ctx.lineTo(sw * 0.44, sh * 0.67);
+        ctx.lineTo(sw * 0.73, sh * 0.36);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    const grid      = document.getElementById("previews");
+    const dlRow     = document.getElementById("downloads");
+
+    SIZES.forEach((size) => {
+      const canvas  = document.createElement("canvas");
+      canvas.width  = size;
+      canvas.height = size;
+
+      // Scale up for display (small canvases are hard to see)
+      const displaySize = Math.max(size, 64);
+      canvas.style.width  = `${displaySize}px`;
+      canvas.style.height = `${displaySize}px`;
+      canvas.style.imageRendering = "pixelated";
+      canvas.style.borderRadius   = "8px";
+      canvas.style.background     = "#1a2540";
+
+      drawShieldIcon(canvas);
+
+      const item  = document.createElement("div");
+      item.className = "item";
+      item.appendChild(canvas);
+      const lbl   = document.createElement("div");
+      lbl.className   = "label";
+      lbl.textContent = `${size}×${size}`;
+      item.appendChild(lbl);
+      grid.appendChild(item);
+
+      // Generate download link
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement("a");
+        a.href     = url;
+        a.download = `icon${size}.png`;
+        a.textContent = `↓ Download icon${size}.png`;
+        a.className = "dl";
+        dlRow.appendChild(a);
+      }, "image/png");
+    });
+  </script>
+</body>
+</html>
