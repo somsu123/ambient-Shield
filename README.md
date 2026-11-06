@@ -4,163 +4,185 @@
 
 # 🛡️ Ambient Shield
 
-### *Your Quiet Digital Protector*
+### *Your Quiet Digital Protector — 100% Local AI & Private Edge Security*
 
-**An AI-powered Chrome Extension that shields you from misinformation, privacy violations, and deepfakes — entirely at the browser edge, with zero data sent to the cloud.**
+**An AI-powered Chrome Extension and web dashboard that shields you from misinformation, predatory privacy policies, and digital manipulation — powered by local Gemma models running on-device with zero cloud AI API keys.**
 
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=google-chrome&logoColor=white)](https://github.com/somsu123/ambient-Shield)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-green)](https://developer.chrome.com/docs/extensions/mv3/)
-[![Zero API Keys](https://img.shields.io/badge/Privacy_Features-Zero_API_Keys-blueviolet)](https://github.com/somsu123/ambient-Shield)
-[![Hackathon](https://img.shields.io/badge/Built_for-Hackathon-orange)](https://github.com/somsu123/ambient-Shield)
+[![100% Local AI](https://img.shields.io/badge/Inference-Local_Ollama_Gemma-blueviolet)](https://ollama.com)
+[![Zero Cloud API Keys](https://img.shields.io/badge/API_Keys-Zero_Required-success)](https://github.com/somsu123/ambient-Shield)
 
 ---
 
-[Features](#-features) • [Architecture](#-architecture) • [Tech Stack](#-tech-stack) • [Installation](#-installation) • [How It Works](#-how-it-works) • [Screenshots](#-screenshots)
+[Features](#-features) • [Local AI Setup](#-local-ai-setup-ollama) • [Architecture](#-architecture) • [Privacy & Data Transparency](#-privacy--data-transparency) • [Installation & Build](#-installation--build) • [Testing](#-testing--verification)
 
 </div>
 
 ---
 
-## 🌟 The Problem We Solved
+## 🌟 The Mission
 
-Every day, billions of people scroll through social media and encounter:
-- 📰 **Fake news and misinformation** disguised as real posts
-- 🎭 **AI-generated deepfake images** used to manipulate public opinion
-- 🔒 **Privacy policies** written in complex legal language no one reads
-- 📢 **Deceptive advertisements** with no way to verify their legitimacy
+Every day, internet users encounter:
+- 📰 **Unverified claims & misinformation** designed to deceive or trigger outrage
+- 🎭 **Manipulated and synthetic imagery** with no context or confidence indicators
+- 🔒 **Predatory privacy policies** filled with complex legal jargon hiding tracking and data-selling clauses
+- 📢 **Deceptive sponsored ads** blending into legitimate social feeds
 
-Ambient Shield makes the invisible **visible** — providing real-time, ambient awareness without interrupting your browsing experience.
-
----
-
-## ✨ Features
-
-### 🔵 Trust Aura — Real-time Social Feed Scanner
-> *"No pop-ups. No blocking. Just ambient awareness that lets YOU decide."*
-
-- **Always-on** overlay that wraps every social media post and advertisement with a colored glow
-- 🟢 **Green** = Verified / Factual content
-- 🟡 **Amber** = Unverified / Take a second look
-- 🔴 **Red** = Known misinformation or scam
-- Works on **LinkedIn, Facebook, Twitter/X, Instagram, Reddit** and all major social platforms
-- Uses a **Web Search Bot** to cross-reference content against live web results — **zero API key required**
+**Ambient Shield** provides subtle, non-intrusive ambient awareness directly in the browser. It prioritizes user privacy above all: **no cloud API keys are required, no account is needed, and all language model reasoning happens on your local machine using Gemma.**
 
 ---
 
-### 🔍 Fact Checker — Entity-Aware Misinformation Scanner
-> *"Searches the whole web and tells you if it's real or fake."*
+## ✨ Features & Truthful Capabilities
 
-The most advanced feature — a fully autonomous fact-checking engine that:
-
-1. **Extracts Entities**: Identifies the claimed party, location, year, and action from any text
-2. **Wikipedia Deep-Fetch**: Fetches the **full article intro** of the most relevant Wikipedia page
-3. **Entity Cross-Check**: Compares the claimed winner/result against what Wikipedia actually says
-4. **Time Paradox Detector**: Automatically flags claims about future events as impossible
-5. **Shows the Source**: Displays the exact Wikipedia URL and quote that proves or disproves the claim
-
-**Example**: If someone claims "TMC won the 2026 West Bengal election" when BJP actually won, the scanner detects this by reading the Wikipedia article and returns:
-> ❌ FALSE: According to our web search, **BJP** won — not Trinamool Congress (TMC). Source: [Wikipedia](https://en.wikipedia.org)
-
-**Zero Gemini API calls. Zero cost. Works offline.**
+### 🔵 Trust Aura — Viewport-Aware Social Feed Scanner
+- Subtly wraps social media posts and ads on LinkedIn, X/Twitter, Facebook, Instagram, Reddit, and YouTube with a colored credibility border:
+  - 🟢 **Green** = Verified / authentic content
+  - 🟡 **Amber** = Take a second look / sensationalist phrasing
+  - 🔴 **Red** = Known scam / debunked pattern
+  - ⚪ **Grey** = Unverified / local engine offline (graceful fallback)
+- **Viewport-Aware:** Uses `IntersectionObserver` to analyze only posts actively in view, avoiding unnecessary background processing.
+- **Throttled Concurrency:** Employs a concurrency limiter (max 2 parallel tasks), request queue, and local deduplication cache.
+- **Strict Local-Only Mode:** A toggle in settings allows disabling all outbound lookups, running entirely on local regex heuristic filters.
 
 ---
 
-### 📋 Privacy Policy Analyzer — Instant Legal Translator
-> *"Turns 50 pages of legal jargon into 5 bullet points you actually understand."*
+### 🔍 Fact Checker — Retrieval + Local LLM Evidence Judge
+- **Autonomous Retrieval:** Queries the public Wikipedia API and DuckDuckGo Lite to gather real-time source evidence.
+- **Strict Evidence-Based Reasoning:** Passes retrieved passages to your local Gemma model with instructions to judge **only** the evidence provided.
+- **Calibrated, Truthful Verdicts:**
+  - `Supported by sources` (verifiable citations found)
+  - `Contradicted by sources` (evidence directly disproves claim)
+  - `Couldn't verify` (evidence insufficient or unavailable; never falsely labelled "FALSE" on weak signals)
+- **Verbatim Citation Verification:** Every cited quotation is checked against the retrieved evidence; non-verbatim or hallucinated quotes are discarded.
+- **Real-Date Time Paradox Detection:** Uses dynamic system dates (`new Date()`). Claims asserting past occurrences of future events are classified as *"cannot be verified yet"* (`insufficient`), rather than fabricated claims.
 
-- **Offline Analysis Engine**: 100% local keyword and regex-based scanning — your data never leaves your device
-- Auto-detects the current website and fetches the official privacy policy
-- Smart knowledge base for **25+ major platforms** (LinkedIn, Facebook, Google, Twitter, etc.)
-- Instantly generates:
-  - 📊 **Risk Score** (1-10) and Risk Level (SAFE / CAUTION / DANGER)
-  - 📋 **What They Collect** (cookies, biometrics, location, etc.)
-  - 🤝 **Who They Share With** (advertisers, law enforcement, etc.)
-  - ⚖️ **Your Rights** (GDPR, CCPA opt-out, right to delete)
+---
+
+### 📋 Privacy Policy Analyzer — Local Heuristics + LLM Synthesis
+- **100% Offline Foundation:** Features an offline regex and heuristic engine that scans legal disclosures without requiring internet access or language model tokens:
+  - 📊 **Risk Score (1-10)** and calibrated Risk Level (`SAFE` / `CAUTION` / `DANGER`)
+  - 📋 **What They Collect** (IPs, biometrics, location, device IDs)
+  - 🤝 **Who They Share With** (ad networks, data brokers, law enforcement)
+  - ⚖️ **Your Rights** (GDPR/CCPA access, erasure, deletion, opt-out)
   - 🚩 **Red Flags** (data selling, forced arbitration, cross-site tracking)
-  - 💡 **Opt-Out Tips** (actionable steps to limit data collection)
+  - 💡 **Actionable Opt-Out Guidance**
+- **Local LLM Synthesis:** When Ollama is running, optionally synthesizes long policy sections into clear, plain-language summaries. If Ollama is offline, the offline engine completes the analysis seamlessly.
 
 ---
 
-### 🖼️ Deepfake Detector — AI Forensic Image Analyzer
-> *"Trained to see what your eyes can't."*
-
-- Upload any image or paste a URL for forensic AI analysis
-- Multi-phase analysis pipeline: URL heuristics → AI text analysis → Full multimodal scan
-- Detects: **Deepfakes, NSFW content, violent imagery, deceptive ads**
-- Full resilience: 60-second timeout, exponential backoff, 4-model fallback cascade
-- Image validation: 10MB limit, auto-resize to 2048px to prevent browser crashes
+### 🖼️ Deepfake & Forensic Image Scanner
+- **Realistic Forensic Disclaimers:** General text and multimodal LLMs cannot conclusively prove deepfakes. Ambient Shield makes this clear: all results include explicit confidence ratings and non-conclusive disclaimers.
+- **Multi-Layer Heuristics:**
+  - File format and dimensional integrity checks (10MB limit, auto-resizing to prevent browser hangs)
+  - Known generative AI filename tags (`midjourney`, `dall-e`, `stablediffusion`, `flux`, `comfyui`)
+  - Explicit / adult content filename and path indicators
+  - Optional local Gemma multimodal analysis for visual anomalies (lighting inconsistency, blending artifacts).
 
 ---
 
-### 🔥 Content Firewall — Triple-Layer Security Shield
-> *"An unbypassable wall against adult and harmful content."*
+### 🔥 Content Firewall — Multi-Layer Protection
+- **Declarative Network Request (DNR) Rules:** Blocks navigation to known adult/malicious domains at the browser network layer using declarative MV3 rule tables (`block-rules.json`).
+- **DOM Safety Shield:** Displays a full-screen block overlay on flagged domains before page content renders.
+- **Tab Navigation Interception:** Catches direct link clicks and redirects in background tabs.
+- *Note:* Operates at the browser network level (Chrome `declarativeNetRequest`), not system-wide DNS. Does not claim to be mathematically unbypassable.
 
-- **Layer 1**: Declarative Network Blocking (blocks at DNS level before content loads)
-- **Layer 2**: DOM-level full-screen overlay shield (for content that slips through)
-- **Layer 3**: Background tab-watcher that monitors every navigation in real-time
-- **Dev Tools Blocker**: Prevents bypass attempts via the browser console
+---
+
+## 💻 Local AI Setup (Ollama)
+
+Ambient Shield uses **Ollama** running locally on your computer with Google's open **Gemma** model.
+
+### 1. Install Ollama
+Download and install Ollama from [ollama.com](https://ollama.com/download).
+
+### 2. Pull the Recommended Model
+In your terminal, pull `gemma3:4b` (recommended balance of reasoning speed and accuracy) or `gemma2:2b` (lightweight):
+
+```bash
+ollama pull gemma3:4b
+```
+
+### 3. Configure Extension Origin Access
+Because Chrome extensions communicate from a unique origin (`chrome-extension://<id>`), Ollama must be launched with `OLLAMA_ORIGINS` enabled.
+
+#### Windows (PowerShell):
+```powershell
+$env:OLLAMA_ORIGINS = "chrome-extension://*"
+ollama serve
+```
+
+#### macOS:
+```bash
+launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
+# Or run in terminal:
+OLLAMA_ORIGINS="chrome-extension://*" ollama serve
+```
+
+#### Linux:
+```bash
+# If using systemd service, add Environment="OLLAMA_ORIGINS=chrome-extension://*" in:
+# /etc/systemd/system/ollama.service.d/environment.conf
+# Or run manually in terminal:
+OLLAMA_ORIGINS="chrome-extension://*" ollama serve
+```
+
+### 4. Verify Connection
+Run in your terminal or browser:
+```bash
+curl http://localhost:11434/api/tags
+```
+You should see JSON listing your installed models. In the extension settings or popup, click **"Test Ollama Connection"** to verify that Ambient Shield recognizes the daemon.
+
+---
+
+## 🔒 Privacy & Data Transparency
+
+| Data | Destination | Purpose | Can it be disabled? |
+|---|---|---|---|
+| **AI Prompts & Queries** | Localhost only (`http://localhost:11434`) | Language model reasoning with Gemma | Always on-device |
+| **Fact-Check Claims** | Wikipedia MediaWiki API & DuckDuckGo Lite | Retrieving public articles and context snippets | Yes, via "Strict Local-Only Mode" |
+| **Policy Analysis** | 100% on-device | Regex heuristic analysis | Always on-device |
+| **Images / Media** | Processed locally in browser memory | Heuristic checks and local model vision | Always on-device |
+| **Browsing History** | Never stored, never transmitted | Ephemeral tab monitoring only | Always on-device |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        AMBIENT SHIELD                               │
-│                   Chrome Extension (MV3)                            │
-├─────────────────┬───────────────────────┬───────────────────────────┤
-│   content.js    │    background.js       │      dashboard.js         │
-│  (DOM Layer)    │  (Service Worker)      │  (Next.js UI)             │
-│                 │                        │                           │
-│  Trust Aura     │  ┌─────────────────┐  │  Policy Analyzer UI       │
-│  Overlays       │  │  callGemini()   │  │  Fact Checker UI          │
-│                 │  │  4-model cascade│  │  Deepfake Detector UI     │
-│  Content        │  │  + 2 endpoints  │  │                           │
-│  Firewall       │  └─────────────────┘  │                           │
-│                 │                        │                           │
-│                 │  ┌─────────────────┐  │                           │
-│                 │  │ deepSearchWeb() │  │                           │
-│                 │  │ Wikipedia API   │  │                           │
-│                 │  │ + DDG Lite      │  │                           │
-│                 │  └─────────────────┘  │                           │
-│                 │                        │                           │
-│                 │  ┌─────────────────┐  │                           │
-│                 │  │analyzePolicyLocal│ │                           │
-│                 │  │ 100% Offline    │  │                           │
-│                 │  └─────────────────┘  │                           │
-└─────────────────┴───────────────────────┴───────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        AMBIENT SHIELD (Chrome MV3)                     │
+├────────────────────┬─────────────────────────────┬─────────────────────┤
+│  DOM Content Layer │   Background Service Worker │     Next.js UI      │
+│  (content.js,      │   (background.js)           │  (app/, components/)│
+│   content-firewall)│                             │                     │
+│                    │  • LLM Provider Orchestrator│  • Fact Checker     │
+│  • Trust Aura Glow │    (Ollama / Gemma local)   │  • Policy Analyzer  │
+│  • Anti-Harm Wall  │  • Evidence Retrieval Engine│  • Image Analyzer   │
+│  • Viewport Trigger│    (Wikipedia + DDG Lite)   │  • Settings Form    │
+│  • DOM Observers   │  • Persistent Storage Sync  │  • Health Tester    │
+└────────────────────┴─────────────────────────────┴─────────────────────┘
+                                   │
+                                   ▼
+                   ┌───────────────────────────────┐
+                   │    Localhost:11434 (Ollama)   │
+                   │      Model: gemma3:4b         │
+                   │    100% On-Device Reasoning   │
+                   └───────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 📦 Installation & Build
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Extension Core** | Chrome MV3 (Manifest V3) | Browser-native extension runtime |
-| **UI Framework** | Next.js 14 (Static Export) | Dashboard and analysis pages |
-| **Styling** | Vanilla CSS + CSS Variables | Zero-dependency, ultra-fast UI |
-| **Fact Checker** | Wikipedia API + DuckDuckGo Lite | Offline entity-aware web search |
-| **Policy Analyzer** | Custom Regex/Heuristic Engine | 100% local, zero API cost |
-| **AI Backbone** | Google Gemini (4-model cascade) | Deepfake detection & Trust Aura |
-| **Caching** | LRU In-Memory Cache (500 entries) | Zero redundant API calls |
-| **Network** | Chrome `declarativeNetRequest` | DNS-level content blocking |
-| **Security** | AbortController + 60s timeout | Prevents service worker hangs |
+### Prerequisites
+- Node.js 18+ (tested on Node 20 & 25)
+- npm 9+
+- Google Chrome, Brave, or Chromium-based browser
 
-### 🧠 AI Model Cascade (Self-Healing)
-```
-gemini-1.5-flash → gemini-1.5-pro → gemini-2.0-flash → gemini-1.5-flash-002
-     ↓ 404?              ↓ 503?           ↓ timeout?            ↓ 
-  Try next            Try next          Try next            Last resort
-```
-Tries both `v1beta` and `v1` API endpoints for each model. Never crashes.
-
----
-
-## 📦 Installation
-
-### Load as Unpacked Extension (Development)
+### Build Steps
 
 ```bash
 # 1. Clone the repository
@@ -170,159 +192,47 @@ cd ambient-Shield
 # 2. Install dependencies
 npm install
 
-# 3. Build the extension
+# 3. Build extension package (Next.js static export + MV3 asset transformation)
 npm run build:ext
-
-# 4. Load in Chrome
-# Go to chrome://extensions
-# Enable "Developer Mode" (top right toggle)
-# Click "Load unpacked"
-# Select the /extension folder
 ```
 
-### Building from Source
+### Load Unpacked in Chrome
+1. Navigate to `chrome://extensions`
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked**
+4. Select the `extension/` folder inside this repository
+5. Click the Ambient Shield icon in the extension toolbar to open the popup
+
+---
+
+## 🧪 Testing & Verification
+
+Ambient Shield includes a unit test suite running on Node's native test runner (`node --test`), requiring zero extra test dependencies.
+
 ```bash
-npm run build:ext    # Builds Next.js + copies to /extension
-npm run dev          # Dev server for the dashboard UI
+# Run unit test suite
+npm test
+
+# Run Next.js linter
+npm run lint
+
+# Run Next.js static build
+npm run build
 ```
+
+### Manual Verification Checklist
+1. **With Ollama Running:**
+   - Open extension popup or dashboard (`analyze`).
+   - Run fact-check on a verified claim (e.g., *"The James Webb Space Telescope launched in December 2021"*). Observe evidence retrieval and verdict: `Supported by sources`.
+   - Test a future claim (e.g., *"Candidate won the 2035 election"*). Observe time paradox response: `Couldn't verify: Future events cannot be verified yet`.
+2. **With Ollama Stopped:**
+   - Stop Ollama.
+   - Run Fact Checker: Observe graceful fallback to retrieved web passages without extension crashes.
+   - Browse social feed: Observe Trust Aura fallback to neutral grey badges without console exceptions.
+   - Run Policy Analyzer: Observe 100% functioning offline heuristic risk score and red flags.
 
 ---
 
-## 🚀 How It Works
+## ⚖️ License
 
-### Trust Aura (Feed Scanner)
-```
-User scrolls feed
-    ↓
-content.js detects new post/ad via MutationObserver
-    ↓
-Sends { text, isAd } → background.js (TRUST_AURA)
-    ↓
-deepSearchWeb() → Wikipedia API + DDG Lite
-    ↓
-analyzeFindings() → Entity cross-check + sentiment analysis
-    ↓
-Injects colored glow overlay div (position:absolute, z-index:9999)
-    [GREEN = safe] [AMBER = caution] [RED = danger]
-```
-
-### Fact Checker
-```
-User pastes claim → "TMC won the 2026 Bengal election"
-    ↓
-extractEntities() → { party: "TMC", location: "West Bengal", year: "2026", claimedWon: true }
-    ↓
-Wikipedia search: "2026 West Bengal Legislative Assembly election"
-    ↓
-Fetch article extract (8 sentences of intro)
-    ↓
-Entity cross-check: "bjp...won" found? → YES
-    ↓
-❌ FALSE: "BJP won, not TMC" + Wikipedia source URL shown
-```
-
-### Privacy Policy Analyzer
-```
-User visits linkedin.com → clicks "Analyze Policy"
-    ↓
-popup.js maps domain → PRIVACY_POLICY_MAP → LinkedIn policy URLs
-    ↓
-background.js fetches all policy pages → strips HTML
-    ↓
-analyzePolicyLocal() — fully offline heuristic engine:
-  • Detects: data selling, cross-site tracking, forced arbitration
-  • Extracts: your rights, opt-out tips, risk score
-    ↓
-Dashboard renders: Risk Score, Red Flags, Rights, Opt-Out Tips
-```
-
----
-
-## 📁 Project Structure
-
-```
-ambient-Shield/
-├── extension/                 # The Chrome Extension
-│   ├── manifest.json          # MV3 config, permissions, host_permissions
-│   ├── background.js          # Service Worker: ALL AI calls, caching, routing
-│   ├── content.js             # DOM: Trust Aura overlays, feed scanner
-│   ├── content-firewall.js    # DOM: Triple-layer content blocking
-│   ├── dashboard.js           # Dashboard: Fact Check, Policy, Deepfake UI
-│   ├── dashboard.html         # Dashboard page
-│   ├── popup.js               # Popup: Quick actions, settings
-│   ├── popup.html             # Extension popup
-│   └── block-rules.json       # declarativeNetRequest blocking rules
-├── app/                       # Next.js pages
-│   ├── page.tsx               # Landing page
-│   ├── analyze/               # Analysis dashboard
-│   └── settings/              # Extension settings
-├── build-extension.ps1        # PowerShell build script
-├── package.json
-└── README.md
-```
-
----
-
-## 🔑 Key Technical Innovations
-
-### 1. Zero-Cost Fact Checking
-Unlike other fact-checkers that require expensive AI APIs, Ambient Shield uses a **custom Entity-Aware Engine** that:
-- Parses political entities (10 Indian/international parties)
-- Maps geographic locations (10 states + cities)
-- Fetches structured Wikipedia article data via the free MediaWiki API
-- Cross-references claimed winners against actual reported winners
-
-### 2. Offline Privacy Analysis
-The Privacy Policy Analyzer processes legal text **entirely in the browser** using:
-- 50+ keyword patterns for data collection types
-- 10+ red flag detection rules (data selling, arbitration clauses, etc.)
-- GDPR/CCPA rights mapping
-
-### 3. Edge-First Architecture
-All intelligence runs in the Chrome Extension Service Worker — a background process that acts as a **local AI proxy**, meaning:
-- Zero latency for cached results
-- No user data ever leaves the browser (for privacy/policy analysis)
-- Works even with slow/unreliable internet
-
-### 4. Resilient AI Backbone
-The `callGemini()` function implements:
-- 4-model cascade with automatic failover
-- Dual endpoint retry (v1beta + v1)
-- 60-second hard timeout via `AbortController`
-- LRU cache (500 entries) to prevent redundant API calls
-
----
-
-## 🎯 Use Cases
-
-| Scenario | Feature Used | Result |
-|---|---|---|
-| Someone shares a fake election result | Fact Checker | ❌ FALSE + Wikipedia source |
-| Scrolling LinkedIn and see a suspicious ad | Trust Aura | 🔴 Red glow automatically |
-| About to sign up for a new service | Privacy Analyzer | Risk Score + Red Flags shown |
-| Received a profile pic that looks AI-generated | Deepfake Detector | Forensic AI analysis |
-| Accidentally clicked a suspicious link | Content Firewall | Blocked before page loads |
-
----
-
-## 🏆 Built For Hackathon
-
-**Ambient Shield** was built to demonstrate that **privacy and digital safety don't require sacrificing user experience**. Instead of aggressive blocking and constant notifications, we use *ambient awareness* — subtle visual signals that empower users to make informed decisions without friction.
-
-> *"The best security is the kind you don't notice — until you need it."*
-
----
-
-## 👤 Author
-
-**Somsubhro** — [@somsu123](https://github.com/somsu123)
-
----
-
-<div align="center">
-
-**⭐ Star this repo if Ambient Shield helped protect you! ⭐**
-
-*Made with ❤️ for a safer, more informed internet*
-
-</div>
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

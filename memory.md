@@ -9,9 +9,10 @@
 
 - **Repository:** `ambient-Shield` (Branch: `main`)
 - **Primary Tech Stack:** Next.js 14 (App Router, Static Export), React 18, TypeScript 5, Tailwind CSS, Chrome Extensions MV3.
-- **AI Integrations:** Google Generative AI (`gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash`, `gemini-1.5-flash-8b` cascade).
-- **Offline / Local Engines:** DuckDuckGo Lite & Wikipedia API scraper (Fact Checker), regex/keyword heuristic engine (Policy Analyzer).
-- **Build Status:** Verified working (`build-extension.ps1` transforms `_next` to `next_assets`, extracts inline scripts, handles routing fixes).
+- **AI Integrations:** 100% Local Inference via Ollama (`gemma3:4b` default, `gemma2:2b` lightweight fallback). ZERO cloud API keys required.
+- **Local & Offline Engines:** Offline Regex & Heuristic Policy Analyzer (100% offline), Wikipedia API + DuckDuckGo Lite retrieval pipeline (Fact Checker), Real-Date Time Paradox Detector, Verifiable Citation Substring Matcher.
+- **Testing:** Node.js native test runner (`node --test tests/*.test.js`) — 13 tests passing across provider fallback, JSON repair, timeouts, caching, and heuristics.
+- **Build Status:** Verified passing (`npm run lint`, `npm run build`, `npm run build:ext`).
 
 ---
 
@@ -19,18 +20,21 @@
 
 | Path | Purpose & Responsibilities |
 |---|---|
-| `extension/manifest.json` | Manifest V3 specification, permissions, declarativeNetRequest rules, CSP definitions. |
-| `extension/background.js` | Service Worker: Handles all IPC messages (`TRUST_AURA`, `SCAN_POLICY`, `SCAN_FACT`, `SCAN_IMAGE`), Gemini multi-model cascade, tab URL blocking, LRU cache. |
-| `extension/content.js` | DOM feed monitor for LinkedIn, Facebook, X, Reddit, Instagram; injects colored Trust Aura indicator cards. |
+| `extension/manifest.json` | Manifest V3 specification with `type: module` service worker, DNR rules, `http://localhost:11434/*` host permissions. |
+| `extension/background.js` | Service Worker: Handles all IPC messages (`TRUST_AURA`, `SCAN_POLICY`, `SCAN_FACT`, `SCAN_IMAGE`, `LLM_GENERATE`, `CHECK_LLM_HEALTH`), synchronous listeners, state persistence. |
+| `extension/llm/` | Provider abstraction: `index.js`, `cache.js` (persistent LRU), `repair.js` (JSON cleanup & validation), `prompts.js`, `providers/ollama.js`, `providers/offscreen-fallback.js`. |
+| `extension/heuristics.js` | Time paradox check (`new Date()`), citation verification, image forensic heuristics, and offline policy analyzer. |
+| `extension/messages.js` | Centralized message actions and boundary payload validation. |
+| `extension/logger.js` | Structured logger with stage tagging and toggleable debug mode. |
+| `extension/content.js` | DOM feed monitor with `IntersectionObserver` viewport triggering, concurrency limit (2), dedupe cache, and neutral fallback. |
 | `extension/content-firewall.js` | Content security firewall DOM script; mounts full-screen block overlay on adult/restricted domains. |
-| `extension/block-rules.json` | DeclarativeNetRequest network filtering rules blocking known adult domains at the network level. |
+| `extension/block-rules.json` | DeclarativeNetRequest network filtering rules blocking known adult domains at the browser network layer. |
 | `app/page.tsx` | Dashboard landing view and quick navigation. |
 | `app/analyze/page.tsx` | Comprehensive analysis hub hosting Fact Checker, Policy Analyzer, Image Analyzer, and History tabs. |
-| `app/settings/page.tsx` | Configuration page for parental controls, API keys, and notification toggles. |
-| `components/analyze/` | Sub-components (`FactChecker.tsx`, `PolicyAnalyzer.tsx`, `ImageAnalyzer.tsx`, `HistoryPanel.tsx`). |
-| `lib/ai.ts` | Server/client SDK integration for `@google/generative-ai` with JSON schema enforcement. |
-| `lib/extension-api.ts` | IPC bridge converting UI actions into `chrome.runtime.sendMessage` or web fallbacks. |
-| `build-extension.ps1` | PowerShell build script automating Next.js static export → Chrome extension directory sync. |
+| `app/settings/SettingsForm.tsx` | Configuration page for local Ollama host, model name, timeout, local-only mode, and live connection health check. |
+| `lib/ai.ts` | Local Ollama client (`callLocalLLM` and `callLocalLLMMultimodal`) with zero cloud dependencies. |
+| `lib/extension-api.ts` | Unified IPC bridge converting UI actions into extension messages or direct local Ollama web fallback. |
+| `tests/` | Mock-harness and unit test suite covering providers, repair, caching, and heuristics. |
 
 ---
 
@@ -38,49 +42,31 @@
 
 | Feature | Status | Implementation Details |
 |---|---|---|
-| **Trust Aura** | ✅ Complete | Injects ambient borders & badges on social feeds; verified against simulated feed DOMs. |
-| **Entity-Aware Fact Checker** | ✅ Complete | Wikipedia API search & intro fetch; entity cross-validation; zero Gemini API cost offline mode. |
-| **Privacy Policy Analyzer** | ✅ Complete | 100% offline regex & heuristic keyword scoring + fallback Gemini deep summary. |
-| **Image & Deepfake Detector** | ✅ Complete | Base64 image payload handling, image resizing to 2048px, multi-model fallback cascade. |
-| **Triple-Layer Firewall** | ✅ Complete | Layer 1: DeclarativeNetRequest; Layer 2: DOM-level overlay; Layer 3: Tab navigation monitor. |
-| **Parental Mode Lock** | ✅ Complete | PIN-protected parental mode toggling in extension background state. |
-| **Next.js Extension Sync** | ✅ Complete | Static HTML export with inline script extraction complying with MV3 CSP. |
+| **Local LLM Engine** | ✅ Complete | Local Ollama abstraction supporting Gemma models with retry, timeout, JSON repair, and LRU cache. |
+| **Trust Aura** | ✅ Complete | Viewport-aware via `IntersectionObserver`, concurrency throttled (2), dedupe cache, graceful grey/neutral fallback when offline. |
+| **Fact Checker** | ✅ Complete | Wikipedia API + DDG Lite retrieval; LLM evidence judging; verifiable citation substrings; real-date time paradox check. |
+| **Privacy Policy Analyzer** | ✅ Complete | 100% offline regex & heuristic keyword scoring + optional local Gemma synthesis. |
+| **Image & Deepfake Detector** | ✅ Complete | Local file/URL heuristics + Gemma multimodal inspection with explicit non-conclusive disclaimers. |
+| **Content Firewall** | ✅ Complete | DeclarativeNetRequest network rules + DOM overlay; truthful non-DNS claims. |
+| **MV3 Service Worker Hardening** | ✅ Complete | Synchronously registered listeners, persistent storage rehydration on SW wake-up, guaranteed `sendResponse`. |
 
 ---
 
 ## 4. Known Technical Debt & Security Observations
 
-1. **API Key Storage:** `background.js` has a default fallback API key. It should seamlessly prioritize `chrome.storage.local` user-supplied keys and only fall back if allowed.
-2. **Tab URL Change Detection:** `chrome.tabs.onUpdated` in `background.js` catches URL navigation, but SPA pushState navigations on some web apps might bypass Layer 3 without content script monitoring.
-3. **Cache Invalidation:** LRU cache in `background.js` is memory-only (resets on service worker unload); consider persisting critical lookups in `chrome.storage.local`.
-4. **Error Boundaries:** Next.js dashboard UI can benefit from finer error boundaries around tab renders when offline.
+1. **In-Browser Fallback:** `offscreen-fallback.js` is currently a clean stub. If full zero-install in-browser LLM is desired in the future, transformers.js ONNX runtime can be mounted in an offscreen document.
+2. **CORS on Ollama:** Ollama requires launching with `OLLAMA_ORIGINS="chrome-extension://*"` to allow requests from the extension background origin. Documented clearly in README and Settings.
 
 ---
 
 ## 5. Changelog & Modifications Ledger
 
-### [2026-11-07] — Phase 0: System Audit Complete
-- **API & Cloud Dependencies Identified:** Found all Gemini/Google Generative AI occurrences across `lib/ai.ts`, `lib/extension-api.ts`, `extension/background.js`, `extension/dashboard.js`, `extension/popup.js`, `app/settings/SettingsForm.tsx`, and `manifest.json`.
-- **Pipeline Tracing:**
-  - `TRUST_AURA`: Overly eager scanning without viewport intersection; hardcoded Indian election regexes; silent error masking.
-  - `SCAN_FACT`: Hardcoded entity list and sentiment word counter; hardcoded year logic; no quote verification; web fallback used Gemini API.
-  - `SCAN_POLICY`: Local regex heuristic works, but lacks local LLM synthesis and falls back to Gemini in web mode.
-  - `SCAN_IMAGE`: Claimed conclusive deepfake detection via Gemini text/vision; missing local heuristics and disclaimers.
-  - `FIREWALL`: Working DNR + DOM overlay; false claims of "DNS-level" and "unbypassable".
-  - `MV3 Reliability`: Ephemeral service worker state lost on SW restart; lacking unified message contract and boundary schema validation.
-- **Audit Table Output:** Logged in changelog and ready for Phase 1 execution.
-
-### [2026-11-07] — Initial Setup & System Alignment
-- **Architecture Role Defined:** Principal Security & AI Systems Architect set as operational lead in [agent.md](file:///d:/ambient-Shield/agent.md).
-- **Memory Ledger Created:** Initialized [memory.md](file:///d:/ambient-Shield/memory.md) as the persistent state repository for all future updates.
-- **Codebase Audited:** Verified MV3 manifest, background service worker, Next.js 14 static build pipeline, and extension bridging utilities.
-
----
-
-## 6. Future Updates & Roadmap Backlog
-
-- [ ] **P1:** Enhance `chrome.storage.local` persistence for analysis history across service worker idle recycles.
-- [ ] **P2:** Add unit/integration tests for entity-matching logic in Fact Checker (`extension/background.js`).
-- [ ] **P3:** Refine SPA navigation listeners in `content-firewall.js` using History API monkey-patching.
-- [ ] **P4:** Add export capability (JSON/CSV) for audit logs in `HistoryPanel.tsx`.
-
+### [2026-11-07] — Phase 0 to 5 Complete: Full Refactoring & Truthfulness Realized
+- **Zero API Keys & Zero Gemini:** Completely removed `@google/generative-ai`, Gemini API keys, and hardcoded keys across the codebase.
+- **Provider Abstraction:** Implemented `extension/llm/` with Ollama as primary local provider (`gemma3:4b`), persistent LRU caching, JSON extraction, and repair retries.
+- **Fact Checker Fixed:** Swapped hardcoded political regexes for Wikipedia API & DDG Lite retrieval + LLM evidence judging with strict JSON schema. Verified citation substring matching and real-date time paradox logic.
+- **Trust Aura Viewport-Aware:** Added `IntersectionObserver` triggering, concurrency limiter (2), dedupe cache, and neutral grey aura for offline states.
+- **Deepfake Honest Scans:** Shifted claims from "conclusive deepfake detection" to heuristic metadata analysis + indicative local vision model with explicit disclaimers.
+- **MV3 Reliability:** Enforced synchronous listener registrations, persisted service worker state in `chrome.storage.local`, validated message boundaries.
+- **Test Suite:** Built unit test suite with 13 tests running on native Node test runner (`node --test`).
+- **Docs Rewritten:** Rewrote `README.md` to reflect true local AI architecture, explicit Ollama setup for Windows/macOS/Linux, and transparent privacy disclosures.
