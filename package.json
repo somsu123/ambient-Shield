@@ -8,7 +8,8 @@
     "build:ext": "powershell -ExecutionPolicy Bypass -File .\\build-extension.ps1",
     "build:extension": "powershell -ExecutionPolicy Bypass -File .\\build-extension.ps1",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "next": "14.2.29",
@@ -21,7 +22,6 @@
     "tailwindcss-animate": "^1.0.7",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.3",
-    "@google/generative-ai": "^0.24.0",
     "zod": "^3.23.8",
     "framer-motion": "^11.3.31",
     "sonner": "^1.7.4"

@@ -2,10 +2,10 @@
 export interface ScanResponse {
   success: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  result: any;
+  result?: any;
   cached?: boolean;
   /** Which analysis phase resolved the result (image scanner only) */
   phase?: number;
-  remainingCalls: number;
+  remainingCalls?: number;
   error?: string;
 }
