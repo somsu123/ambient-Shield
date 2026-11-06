@@ -290,8 +290,8 @@ export default function HomePage() {
                 {
                   step: "02",
                   icon: <Zap size={22} style={{ color: "var(--caution)" }} />,
-                  title: "Instant Cache or AI",
-                  desc: "Identical inputs return cached results instantly — zero API cost. New inputs go to Gemini 2.5 Flash.",
+                  title: "Instant Cache or Local AI",
+                  desc: "Identical inputs return cached results instantly. New inputs are processed privately by your local Gemma model.",
                 },
                 {
                   step: "03",

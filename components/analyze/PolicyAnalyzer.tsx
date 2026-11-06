@@ -227,7 +227,7 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
       <AnimatePresence>
         {state.loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <EmptyState icon="🔍" title="Analyzing policy…" description="Checking cache, then querying Gemini if needed. Usually under 5 seconds." />
+            <EmptyState icon="🔍" title="Analyzing policy…" description="Scanning with offline heuristics engine and local Gemma LLM." />
           </motion.div>
         )}
       </AnimatePresence>

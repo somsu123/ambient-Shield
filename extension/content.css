@@ -48,6 +48,13 @@
   animation: ambientDangerPulse 2.4s ease-in-out infinite !important;
 }
 
+/* Grey / Neutral — Unverified / Offline */
+.ambient-aura-neutral {
+  border: 1px dashed rgba(160, 175, 200, 0.5) !important;
+  box-shadow: inset 0 0 10px rgba(160, 175, 200, 0.08) !important;
+  transition: border-color 0.4s ease !important;
+}
+
 @keyframes ambientDangerPulse {
   0%, 100% { border-color: rgba(255,77,109,0.60); box-shadow: inset 0 0 18px rgba(255,77,109,0.14); }
   50%       { border-color: rgba(255,77,109,1.00); box-shadow: inset 0 0 36px rgba(255,77,109,0.34); }
@@ -105,9 +112,11 @@
 .ambient-aura-safe:hover    > .ambient-badge,
 .ambient-aura-caution:hover > .ambient-badge,
 .ambient-aura-danger:hover  > .ambient-badge,
+.ambient-aura-neutral:hover > .ambient-badge,
 .ambient-aura-safe:hover    .ambient-badge,
 .ambient-aura-caution:hover .ambient-badge,
-.ambient-aura-danger:hover  .ambient-badge {
+.ambient-aura-danger:hover  .ambient-badge,
+.ambient-aura-neutral:hover .ambient-badge {
   opacity: 1 !important;
   transform: translateY(0) !important;
   pointer-events: auto !important;

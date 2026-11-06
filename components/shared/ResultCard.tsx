@@ -268,8 +268,8 @@ export default function ResultCard({
           className="flex items-center justify-between pt-2 text-xs"
           style={{ color: "var(--text3)", borderTop: "1px solid var(--border)" }}
         >
-          <span>Powered by Gemini 2.5 Flash</span>
-          <span>{remainingCalls} AI calls remaining today</span>
+          <span>Powered by Local Gemma LLM</span>
+          <span>100% Private (On-Device)</span>
         </div>
       </div>
     </div>

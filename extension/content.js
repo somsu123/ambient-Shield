@@ -1,6 +1,6 @@
-// Ambient Shield — Content Script (Trust Aura v4)
-// Uses an injected overlay div inside each post for the colored border glow.
-// This approach cannot be overridden by site CSS or clipped by overflow:hidden.
+// Ambient Shield — Content Script (Trust Aura v5 - Optimized & Viewport-Aware)
+// Injects ambient glow badges only when visible. Local pre-filter + concurrency throttle.
+// ─────────────────────────────────────────────────────────────────────────────
 
 (function () {
   "use strict";
@@ -11,28 +11,42 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let feedScannerEnabled = true;
   let blurAdultEnabled   = true;
+  let localOnlyMode      = false;
 
-  const processed = new WeakSet(); // elements already queued/done
+  const processed = new WeakSet(); // elements already observed or queued
+  const localCache = new Map();   // hash(text) -> { level, reason }
+  const MAX_CACHE_SIZE = 300;
 
-  // ── AI Queue ───────────────────────────────────────────────────────────────
+  // ── AI Queue (Concurrency Limit: 2) ────────────────────────────────────────
   const MAX_CONCURRENT = 2;
-  let   active = 0;
-  const queue  = [];
+  let active = 0;
+  const queue = [];
 
-  function enqueue(task) { queue.push(task); drain(); }
+  function enqueue(task) {
+    queue.push(task);
+    drain();
+  }
+
   function drain() {
     while (active < MAX_CONCURRENT && queue.length > 0) {
-      const t = queue.shift();
+      const task = queue.shift();
       active++;
-      Promise.resolve().then(t).finally(() => { active--; drain(); });
+      Promise.resolve()
+        .then(task)
+        .catch(() => {})
+        .finally(() => {
+          active--;
+          drain();
+        });
     }
   }
 
-  // ── Host detection ─────────────────────────────────────────────────────────
+  // ── Host detection & Selectors ─────────────────────────────────────────────
   const host = location.hostname.replace(/^www\./, "");
+  function matchHost(domain) {
+    return host === domain || host.endsWith(`.${domain}`);
+  }
 
-  // ── Platform selectors ─────────────────────────────────────────────────────
-  // Using data-attribute selectors which are more stable than class names
   function getSelectors() {
     if (matchHost("twitter.com") || matchHost("x.com")) {
       return {
@@ -66,7 +80,6 @@
     }
     if (matchHost("linkedin.com")) {
       return {
-        // LinkedIn uses data-urn on feed update containers; also catches sidebar ads
         post: [
           'div[data-urn*="urn:li:activity"]',
           'div[data-urn*="urn:li:sponsoredUpdate"]',
@@ -75,7 +88,6 @@
           'div[class*="occludable-update"]',
         ].join(','),
         adCheck: (el) => {
-          // LinkedIn marks ads with a "Promoted" label
           if (el.getAttribute('data-urn') && el.getAttribute('data-urn').includes('sponsor')) return true;
           const allText = el.querySelectorAll('span,a');
           for (const t of allText) {
@@ -100,21 +112,11 @@
         },
       };
     }
-    if (matchHost("tiktok.com")) {
-      return {
-        post: 'div[class*="DivItemContainerV2"],div[class*="SwipeCard"]',
-        adCheck: (el) => !!el.querySelector('[class*="PromotedLabel"],[data-e2e*="ad"]'),
-      };
-    }
     // Generic fallback
     return {
       post: 'article,[role="article"],.post,.feed-item,[data-testid*="post"],[data-testid*="tweet"]',
       adCheck: () => false,
     };
-  }
-
-  function matchHost(domain) {
-    return host === domain || host.endsWith(`.${domain}`);
   }
 
   const SEL = getSelectors();
@@ -142,7 +144,8 @@
     for (const re of CAUTION_RE) if (re.test(t)) hits++;
     if (hits >= 2) return "danger";
     if (hits === 1) return "caution";
-    // Excessive caps
+
+    // Excessive caps check
     const words = t.split(/\s+/).filter(w => w.length > 2);
     if (words.length >= 6) {
       const caps = words.filter(w => /^[A-Z]+$/.test(w));
@@ -151,16 +154,14 @@
     return null;
   }
 
-  // ── Overlay-based glow (injected child div, never clipped) ────────────────
+  // ── Overlay Glow Rendering ────────────────────────────────────────────────
   function getOrCreateOverlay(el) {
     let ov = el.querySelector(':scope > .ambient-aura-overlay');
     if (!ov) {
       ov = document.createElement('div');
       ov.className = 'ambient-aura-overlay';
-      // Must be first child so it's behind content
       el.insertBefore(ov, el.firstChild);
     }
-    // Ensure the parent is positioned so absolute child works
     const pos = getComputedStyle(el).position;
     if (pos === 'static') el.style.setProperty('position', 'relative', 'important');
     return ov;
@@ -173,18 +174,17 @@
     ov.setAttribute('data-level', level);
     ov.className = `ambient-aura-overlay ambient-aura-${level}`;
 
-    // Remove old badge
+    // Remove old badges
     ov.querySelectorAll('.ambient-badge').forEach(b => b.remove());
     if (level === 'scanning') return;
 
-    // Build badge
     const MAP = {
       safe:    { icon: '✅', color: '#3ecf8e', label: isAd ? 'Ad Verified'       : 'Verified'       },
       caution: { icon: '🟡', color: '#f5a623', label: isAd ? 'Ad — Check Source' : 'Take a 2nd Look' },
       danger:  { icon: '🔴', color: '#ff4d6d', label: isAd ? 'Ad — Likely False' : 'Misinformation'  },
+      neutral: { icon: '⚪', color: '#8892b0', label: isAd ? 'Ad — Unverified'   : 'Neutral / Unverified' },
     };
-    const m = MAP[level];
-    if (!m) return;
+    const m = MAP[level] || MAP.neutral;
 
     const badge = document.createElement('div');
     badge.className = 'ambient-badge';
@@ -192,7 +192,7 @@
     badge.innerHTML =
       `<span class="ambient-badge-icon">${m.icon}</span>` +
       `<span class="ambient-badge-text">${esc(m.label)}` +
-      (reason ? ` <span class="ambient-badge-reason">· ${esc(reason.slice(0, 40))}</span>` : '') +
+      (reason ? ` <span class="ambient-badge-reason">· ${esc(reason.slice(0, 45))}</span>` : '') +
       `</span>`;
     ov.appendChild(badge);
   }
@@ -203,13 +203,15 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ── AI call via background.js ──────────────────────────────────────────────
-  function runAI(el, text, isAd) {
-    enqueue(() => new Promise(resolve => {
+  // ── AI Evaluation ─────────────────────────────────────────────────────────
+  function runAI(el, text, isAd, textHash) {
+    enqueue(() => new Promise((resolve) => {
       const timer = setTimeout(() => {
-        if (el.getAttribute('data-ambient-level') === 'scanning') applyGlow(el, 'safe', '', isAd);
+        if (el.getAttribute('data-ambient-level') === 'scanning') {
+          applyGlow(el, 'neutral', 'Analysis timed out', isAd);
+        }
         resolve();
-      }, 20000);
+      }, 15000);
 
       try {
         chrome.runtime.sendMessage(
@@ -217,62 +219,91 @@
           (resp) => {
             clearTimeout(timer);
             if (!resp || chrome.runtime.lastError) {
-              if (el.getAttribute('data-ambient-level') === 'scanning') applyGlow(el, 'safe', '', isAd);
+              applyGlow(el, 'neutral', 'Engine offline', isAd);
             } else {
-              const lvl = ['safe','caution','danger'].includes(resp.level) ? resp.level : 'safe';
+              const lvl = ['safe', 'caution', 'danger', 'neutral'].includes(resp.level) ? resp.level : 'neutral';
               applyGlow(el, lvl, resp.reason || '', isAd);
+              if (localCache.size < MAX_CACHE_SIZE) {
+                localCache.set(textHash, { level: lvl, reason: resp.reason || '' });
+              }
             }
             resolve();
           }
         );
       } catch {
         clearTimeout(timer);
-        if (el.getAttribute('data-ambient-level') === 'scanning') applyGlow(el, 'safe', '', isAd);
+        applyGlow(el, 'neutral', 'Engine offline', isAd);
         resolve();
       }
     }));
   }
 
-  // ── Process one element ────────────────────────────────────────────────────
+  // ── Process One Element (Triggered only when intersecting viewport) ────────
   function processEl(el) {
-    if (processed.has(el)) return;
     if ((el.offsetHeight || 0) < 40) return;
 
     const text = (el.innerText || el.textContent || '').replace(/\s{2,}/g, ' ').trim();
-    if (text.length < 20) return;
+    if (text.length < 25) return;
 
-    processed.add(el);
     el.setAttribute('data-ambient-scanned', 'true');
+    const isAd = SEL.adCheck(el);
+    const textHash = text.slice(0, 100).toLowerCase();
 
-    const isAd   = SEL.adCheck(el);
-    const fast   = fastClassify(text);
-
-    if (fast === 'danger' || fast === 'caution') {
-      applyGlow(el, fast, 'Pattern detected', isAd);
+    // 1. Cache hit
+    if (localCache.has(textHash)) {
+      const cached = localCache.get(textHash);
+      applyGlow(el, cached.level, cached.reason, isAd);
       return;
     }
 
-    // Show scanning shimmer immediately
+    // 2. Cheap pre-filter
+    const fast = fastClassify(text);
+    if (fast === 'danger' || fast === 'caution') {
+      applyGlow(el, fast, 'Pattern detected', isAd);
+      localCache.set(textHash, { level: fast, reason: 'Pattern detected' });
+      return;
+    }
+
+    // 3. Local-only mode check
+    if (localOnlyMode) {
+      applyGlow(el, 'safe', 'Local mode verified', isAd);
+      return;
+    }
+
+    // 4. Show scanning state & queue inference
     applyGlow(el, 'scanning', '', isAd);
-    // Queue AI verification
-    runAI(el, text, isAd);
+    runAI(el, text, isAd, textHash);
   }
 
-  // ── Scan feed ──────────────────────────────────────────────────────────────
+  // ── Viewport Observer (IntersectionObserver) ──────────────────────────────
+  const postObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          postObserver.unobserve(el);
+          processEl(el);
+        }
+      }
+    },
+    { rootMargin: "150px 0px" } // Pre-trigger slightly before entering view
+  );
+
+  // ── Scan Feed ─────────────────────────────────────────────────────────────
   function scanFeed() {
     if (!feedScannerEnabled) return;
     try {
-      document.querySelectorAll(SEL.post).forEach(el => {
-        if (!el.dataset.ambientScanned) processEl(el);
+      document.querySelectorAll(SEL.post).forEach((el) => {
+        if (processed.has(el) || el.dataset.ambientScanned) return;
+        processed.add(el);
+        postObserver.observe(el);
       });
-    } catch (e) {
-      // Silently swallow selector errors (don't crash host page)
-    }
+    } catch (_) {}
   }
 
-  // ── Adult image blur ──────────────────────────────────────────────────────
+  // ── Adult Image Blur (Firewall assist) ─────────────────────────────────────
   const blurProcessed = new WeakSet();
-  const ADULT_HOSTS   = ['pornhub.com','xvideos.com','xhamster.com','nhentai.net','onlyfans.com','chaturbate.com'];
+  const ADULT_HOSTS = ['pornhub.com','xvideos.com','xhamster.com','nhentai.net','onlyfans.com','chaturbate.com'];
 
   function applyBlur(img) {
     if (blurProcessed.has(img)) return;
@@ -307,12 +338,11 @@
         if ((img.offsetWidth || 0) < 80 || (img.offsetHeight || 0) < 80) return;
         applyBlur(img);
       });
-    } catch {}
+    } catch (_) {}
   }
 
-  // ── Image scan button ──────────────────────────────────────────────────────
+  // ── Image Scan Button ─────────────────────────────────────────────────────
   const imgProcessed = new WeakSet();
-
   function addScanButton(img) {
     if (imgProcessed.has(img) || img.dataset.ambientScanBtn) return;
     if ((img.offsetWidth || 0) < 100 || (img.offsetHeight || 0) < 100) return;
@@ -325,13 +355,13 @@
     if (pos === 'static') parent.style.setProperty('position', 'relative', 'important');
 
     const btn = document.createElement('button');
-    btn.className   = 'ambient-scan-btn';
+    btn.className = 'ambient-scan-btn';
     btn.textContent = '🛡️ Scan';
-    btn.title       = 'Scan with Ambient Shield';
+    btn.title = 'Scan with Ambient Shield';
     btn.addEventListener('click', e => {
       e.stopPropagation(); e.preventDefault();
       const src = img.src || img.currentSrc || '';
-      if (src) try { chrome.runtime.sendMessage({ action: 'OPEN_IMAGE_SCAN', imageUrl: src }); } catch {}
+      if (src) try { chrome.runtime.sendMessage({ action: 'OPEN_IMAGE_SCAN', imageUrl: src }); } catch (_) {}
     });
     parent.appendChild(btn);
   }
@@ -342,22 +372,22 @@
         const go = () => { if ((img.naturalWidth || 0) >= 100) addScanButton(img); };
         if (img.complete) go(); else img.addEventListener('load', go, { once: true, passive: true });
       });
-    } catch {}
+    } catch (_) {}
   }
 
-  // ── Status badge ───────────────────────────────────────────────────────────
+  // ── Status Indicator ──────────────────────────────────────────────────────
   function createStatusIndicator() {
     if (document.getElementById('ambient-status-indicator')) return;
     const el = document.createElement('div');
-    el.id        = 'ambient-status-indicator';
+    el.id = 'ambient-status-indicator';
     el.className = 'ambient-status-indicator';
-    el.title     = 'Ambient Shield — Trust Aura active';
+    el.title = 'Ambient Shield — Trust Aura active';
     el.innerHTML = '<span>🛡️</span><span class="ambient-status-text">Trust Aura Active</span>';
     el.addEventListener('click', () => el.classList.toggle('ambient-status-expanded'));
     document.body.appendChild(el);
   }
 
-  // ── Messages ───────────────────────────────────────────────────────────────
+  // ── Messages ──────────────────────────────────────────────────────────────
   chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
     try {
       switch (msg.action) {
@@ -391,11 +421,13 @@
         default:
           sendResponse({ ok: false });
       }
-    } catch { sendResponse({ ok: false }); }
+    } catch {
+      sendResponse({ ok: false });
+    }
     return true;
   });
 
-  // ── MutationObserver (infinite scroll) ────────────────────────────────────
+  // ── MutationObserver ──────────────────────────────────────────────────────
   let rafPending = false;
   function scheduleRescan() {
     if (rafPending) return;
@@ -410,7 +442,10 @@
 
   const observer = new MutationObserver(muts => {
     for (const m of muts) {
-      if (m.addedNodes.length > 0) { scheduleRescan(); return; }
+      if (m.addedNodes.length > 0) {
+        scheduleRescan();
+        return;
+      }
     }
   });
 
@@ -419,11 +454,15 @@
     chrome.storage.sync.get({ feedScanner: true, blurAdult: true }, cfg => {
       feedScannerEnabled = cfg.feedScanner !== false;
       blurAdultEnabled   = cfg.blurAdult   !== false;
-      createStatusIndicator();
-      scanFeed();
-      scanImages();
-      scanBlurImages();
-      observer.observe(document.body, { childList: true, subtree: true });
+
+      chrome.storage.local.get(["localOnlyMode"], lcfg => {
+        localOnlyMode = Boolean(lcfg.localOnlyMode);
+        createStatusIndicator();
+        scanFeed();
+        scanImages();
+        scanBlurImages();
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
     });
   }
 

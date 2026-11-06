@@ -198,30 +198,44 @@ toggleBlur.addEventListener("change", () => {
   notifyContentScript("SET_BLUR_ADULT", toggleBlur.checked);
 });
 
-// ── API key panel ──
+// ── Local AI Engine panel ──
 apiRowToggle.addEventListener("click", () => {
   const isOpen = apiBody.classList.toggle("open");
   apiExpandIcon.classList.toggle("open", isOpen);
 });
 
 btnSaveKey.addEventListener("click", () => {
-  const key = apiKeyInput.value.trim();
-  if (!key) { showToast("⚠ Key cannot be empty"); return; }
-  chrome.storage.local.set({ geminiKey: key }, () => {
-    updateKeyStatus(true);
-    showToast("✓ API key saved!");
+  const model = apiKeyInput.value.trim() || "gemma3:4b";
+  chrome.storage.local.set({ ollamaModel: model }, () => {
+    checkEngineStatus(model);
+    showToast("✓ Model configuration saved!");
     apiBody.classList.remove("open");
     apiExpandIcon.classList.remove("open");
   });
 });
 
-function updateKeyStatus(hasKey, customLabel) {
-  if (hasKey) {
-    apiKeyStatus.textContent = customLabel || "✓ Key configured";
+function updateKeyStatus(isOk, label) {
+  apiKeyStatus.textContent = label;
+  if (isOk) {
     apiKeyStatus.classList.remove("missing");
   } else {
-    apiKeyStatus.textContent = "⚠ No API key set";
     apiKeyStatus.classList.add("missing");
+  }
+}
+
+function checkEngineStatus(modelName) {
+  try {
+    chrome.runtime.sendMessage({ action: "CHECK_LLM_HEALTH" }, (resp) => {
+      if (resp && resp.ready) {
+        updateKeyStatus(true, `✓ Ready (${modelName || "gemma3:4b"})`);
+      } else if (resp && resp.providers?.ollama?.status === "model_missing") {
+        updateKeyStatus(false, `⚠ Model missing (pull ${modelName})`);
+      } else {
+        updateKeyStatus(false, "⚠ Ollama Offline");
+      }
+    });
+  } catch (_) {
+    updateKeyStatus(false, "⚠ Local Engine Offline");
   }
 }
 
@@ -231,13 +245,10 @@ chrome.storage.sync.get({ feedScanner: true, blurAdult: true }, (result) => {
   toggleBlur.checked = result.blurAdult   !== false;
 });
 
-chrome.storage.local.get(["geminiKey"], (result) => {
-  if (result.geminiKey) {
-    apiKeyInput.value = result.geminiKey;
-    updateKeyStatus(true, "✓ Custom key active");
-  } else {
-    updateKeyStatus(true, "✓ Default key active (Gemini 2.5 Pro)");
-  }
+chrome.storage.local.get(["ollamaModel"], (result) => {
+  const model = result.ollamaModel || "gemma3:4b";
+  apiKeyInput.value = model;
+  checkEngineStatus(model);
 });
 
 loadCurrentTab();

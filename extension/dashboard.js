@@ -50,9 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Settings
   document.getElementById('btn-save-key').addEventListener('click', () => {
-    const key = document.getElementById('api-key-input').value.trim();
-    if (key && typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ geminiKey: key }, () => {
+    const model = document.getElementById('api-key-input').value.trim() || 'gemma3:4b';
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ ollamaModel: model }, () => {
         const res = document.getElementById('settings-result');
         res.style.display = 'block';
         setTimeout(() => res.style.display = 'none', 3000);
@@ -60,10 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Load existing key
+  // Load existing model
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get(['geminiKey'], (res) => {
-      if (res.geminiKey) document.getElementById('api-key-input').value = res.geminiKey;
+    chrome.storage.local.get(['ollamaModel'], (res) => {
+      if (res.ollamaModel) document.getElementById('api-key-input').value = res.ollamaModel;
     });
   }
 
@@ -163,7 +163,7 @@ function showImagePreview(src) {
   preview.classList.add('show');
 }
 
-// ── Gemini bridge ─────────────────────────────────────────────────────────────
+// ── Local LLM bridge ────────────────────────────────────────────────────────
 function sendMsg(payload, callback) {
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
     chrome.runtime.sendMessage(payload, (resp) => {
@@ -174,30 +174,35 @@ function sendMsg(payload, callback) {
       }
     });
   } else {
-    // Dev fallback — direct Gemini call (not inside extension)
-    directGemini(payload, callback);
+    // Dev fallback — direct local Ollama call (not inside extension)
+    directOllama(payload, callback);
   }
 }
 
-async function directGemini(payload, callback) {
-  const KEY   = '';
-  const MODEL = 'gemini-2.0-flash';
-  const url   = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${KEY}`;
+async function directOllama(payload, callback) {
+  const host  = 'http://localhost:11434';
+  const model = 'gemma3:4b';
+  const url   = `${host}/api/chat`;
   try {
-    const parts = [];
+    const messages = [];
+    const userMsg = { role: 'user', content: payload.prompt || '' };
     if (payload.imageBase64) {
-      parts.push({ inlineData: { mimeType: payload.imageMime || 'image/jpeg', data: payload.imageBase64 } });
+      userMsg.images = [payload.imageBase64];
     }
-    parts.push({ text: payload.prompt });
+    messages.push(userMsg);
+
     const res  = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 1024 } }),
+      body: JSON.stringify({ model, messages, stream: false, format: 'json' }),
     });
+    if (!res.ok) {
+      throw new Error(`Ollama returned status ${res.status}`);
+    }
     const data = await res.json();
-    callback({ text: data.candidates?.[0]?.content?.parts?.[0]?.text || '' });
+    callback({ text: data.message?.content || '' });
   } catch (err) {
-    callback({ error: err.message });
+    callback({ error: `Local Ollama error: ${err.message}. Ensure Ollama is running with model ${model}.` });
   }
 }
 
@@ -521,7 +526,7 @@ Risk: safe=authentic (0-30), caution=suspicious (31-65), danger=likely fake (66-
 Be specific. Note any facial artifacts, lighting inconsistencies, blending edges, or GAN patterns.`;
 
   // Show loading with 'slow' state after 30s
-  _setDeepfakeLoading(btn, 'Analyzing with Gemini AI…');
+  _setDeepfakeLoading(btn, 'Analyzing with Local Gemma AI…');
   _deepfakeSlowTimer = setTimeout(() => {
     if (_deepfakeAnalyzing) _setDeepfakeSlow(btn);
   }, 30_000);
@@ -560,7 +565,7 @@ Be specific. Note any facial artifacts, lighting inconsistencies, blending edges
 
 function _doDeepfake(btn, systemPrompt, base64, mime) {
   sendMsg(
-    { action: 'GEMINI_GENERATE', prompt: systemPrompt, imageBase64: base64, imageMime: mime },
+    { action: 'LLM_GENERATE', prompt: systemPrompt, imageBase64: base64, imageMime: mime },
     (resp) => {
       if (!_deepfakeAnalyzing) return; // cancelled
       _cancelDeepfake();
@@ -568,7 +573,7 @@ function _doDeepfake(btn, systemPrompt, base64, mime) {
       btn.textContent = '🖼️ Analyze Image';
 
       if (!resp || resp.error) {
-        _showDeepfakeError(btn, resp ? resp.error : 'No response from AI. Check your API key and try again.');
+        _showDeepfakeError(btn, resp ? resp.error : 'No response from Local LLM. Ensure Ollama is running.');
         return;
       }
       renderDeepfakeResult(safeParseDeepfake(resp.text));
@@ -600,7 +605,7 @@ function _setDeepfakeLoading(btn, label) {
     <div class="result-card" style="align-items:center;text-align:center;padding:40px 24px">
       <div class="spinner" style="border-color:rgba(91,156,246,0.2);border-top-color:var(--accent);margin:0 auto 16px;width:32px;height:32px;border-width:3px"></div>
       <div style="color:var(--text2);font-size:14px;font-weight:600;margin-bottom:6px">${label}</div>
-      <div style="color:var(--text3);font-size:12px">Powered by Gemini 2.0 Flash</div>
+      <div style="color:var(--text3);font-size:12px">Powered by Local Gemma (Ollama)</div>
     </div>`;
   el.classList.add('show');
 }
@@ -611,7 +616,7 @@ function _setDeepfakeSlow(btn) {
     <div class="result-card" style="align-items:center;text-align:center;padding:40px 24px">
       <div class="spinner" style="border-color:rgba(245,166,35,0.2);border-top-color:var(--caution);margin:0 auto 16px;width:32px;height:32px;border-width:3px"></div>
       <div style="color:var(--caution);font-size:14px;font-weight:600;margin-bottom:6px">⏳ Taking longer than expected…</div>
-      <div style="color:var(--text3);font-size:12px;margin-bottom:18px">Gemini is processing the image. This can take up to 60 seconds for large files.</div>
+      <div style="color:var(--text3);font-size:12px;margin-bottom:18px">Local model is processing. Larger models can take 30-45 seconds on CPU.</div>
       <button id="btn-df-cancel" style="padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text2);font-size:12px;cursor:pointer">Cancel &amp; Retry</button>
     </div>`;
   el.classList.add('show');

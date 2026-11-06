@@ -461,9 +461,9 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-2 text-xs" style={{ color: "var(--text3)", borderTop: "1px solid var(--border)" }}>
-                <span>Powered by Gemini 2.5 Flash</span>
+                <span>Forensic Heuristics + Local Gemma Vision (Indicative)</span>
                 <div className="flex items-center gap-3">
-                  <span>{state.remainingCalls} AI calls remaining today</span>
+                  <span>100% Private (On-Device)</span>
                   <Button id="image-clear-btn" variant="ghost" size="sm" onClick={handleClear} className="gap-1.5 h-7 text-xs">
                     <Trash2 size={11} /> Clear
                   </Button>

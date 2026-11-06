@@ -403,22 +403,22 @@
 
     <div class="divider"></div>
 
-    <!-- API key panel -->
-    <span class="section-label">Gemini API Key</span>
+    <!-- Local AI Engine panel -->
+    <span class="section-label">Local AI Engine</span>
     <div class="api-panel">
       <div class="api-row" id="api-row-toggle">
         <div class="api-row-left">
-          <span class="toggle-name">Gemini API Key</span>
-          <span id="api-key-status" class="api-key-status">✓ Key configured</span>
+          <span class="toggle-name">Ollama (Gemma)</span>
+          <span id="api-key-status" class="api-key-status">Checking engine…</span>
         </div>
         <span class="api-expand-icon" id="api-expand-icon">▼</span>
       </div>
       <div class="api-body" id="api-body">
         <div class="api-input-row">
-          <input class="api-input" id="api-key-input" type="password" placeholder="AIzaSy…" autocomplete="off" spellcheck="false" />
+          <input class="api-input" id="api-key-input" type="text" placeholder="gemma3:4b" autocomplete="off" spellcheck="false" />
           <button class="btn btn-primary btn-small" id="btn-save-key">Save</button>
         </div>
-        <span class="api-hint">Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></span>
+        <span class="api-hint" id="ollama-hint">100% private. Run: <code>ollama pull gemma3:4b</code></span>
       </div>
     </div>
 
