@@ -59,6 +59,17 @@
 
 ## 5. Changelog & Modifications Ledger
 
+### [2026-11-07] — Phase 0: System Audit Complete
+- **API & Cloud Dependencies Identified:** Found all Gemini/Google Generative AI occurrences across `lib/ai.ts`, `lib/extension-api.ts`, `extension/background.js`, `extension/dashboard.js`, `extension/popup.js`, `app/settings/SettingsForm.tsx`, and `manifest.json`.
+- **Pipeline Tracing:**
+  - `TRUST_AURA`: Overly eager scanning without viewport intersection; hardcoded Indian election regexes; silent error masking.
+  - `SCAN_FACT`: Hardcoded entity list and sentiment word counter; hardcoded year logic; no quote verification; web fallback used Gemini API.
+  - `SCAN_POLICY`: Local regex heuristic works, but lacks local LLM synthesis and falls back to Gemini in web mode.
+  - `SCAN_IMAGE`: Claimed conclusive deepfake detection via Gemini text/vision; missing local heuristics and disclaimers.
+  - `FIREWALL`: Working DNR + DOM overlay; false claims of "DNS-level" and "unbypassable".
+  - `MV3 Reliability`: Ephemeral service worker state lost on SW restart; lacking unified message contract and boundary schema validation.
+- **Audit Table Output:** Logged in changelog and ready for Phase 1 execution.
+
 ### [2026-11-07] — Initial Setup & System Alignment
 - **Architecture Role Defined:** Principal Security & AI Systems Architect set as operational lead in [agent.md](file:///d:/ambient-Shield/agent.md).
 - **Memory Ledger Created:** Initialized [memory.md](file:///d:/ambient-Shield/memory.md) as the persistent state repository for all future updates.
