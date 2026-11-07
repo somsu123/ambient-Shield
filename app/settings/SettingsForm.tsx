@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsForm() {
   const [provider, setProvider] = useState("ollama");
@@ -79,21 +80,21 @@ export default function SettingsForm() {
           tested: true,
           ok: false,
           models,
-          message: `Ollama is running, but model "${ollamaModel}" is missing. Run: ollama pull ${ollamaModel}`,
+          message: `Ollama daemon running, but model "${ollamaModel}" not found. Run: ollama pull ${ollamaModel}`,
         });
       } else {
         setHealthStatus({
           tested: true,
           ok: true,
           models,
-          message: `Successfully connected to Ollama with model "${ollamaModel}".`,
+          message: `Ollama active. Model "${ollamaModel}" verified ready for inference.`,
         });
       }
     } catch {
       setHealthStatus({
         tested: true,
         ok: false,
-        message: `Unable to connect to Ollama at ${ollamaHost}. Ensure Ollama is started with OLLAMA_ORIGINS="*"`,
+        message: `Unable to connect to Ollama at ${ollamaHost}. Ensure daemon is running and CORS is enabled via OLLAMA_ORIGINS="*".`,
       });
     } finally {
       setChecking(false);
@@ -122,88 +123,73 @@ export default function SettingsForm() {
       const g = window as unknown as { chrome?: { storage?: { local?: { set: (obj: Record<string, unknown>, cb: () => void) => void } } } };
       if (g.chrome?.storage?.local) {
         g.chrome.storage.local.set(config, () => {
-          toast.success("Settings saved to Extension & Local Storage!");
+          toast.success("Settings saved to Extension and local storage.");
         });
         return;
       }
     }
 
-    toast.success("Local settings saved successfully!");
+    toast.success("Local settings saved successfully.");
   };
 
   return (
     <div className="space-y-6 max-w-xl">
       <div>
-        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--text)" }}>
-          Local AI Provider (100% Private)
+        <h3 className="text-sm font-semibold font-mono uppercase tracking-wider text-white mb-1">
+          Local Inference Engine (100% On-Device)
         </h3>
-        <p className="text-xs" style={{ color: "var(--text2)" }}>
-          Ambient Shield runs entirely on your local machine using Gemma. No external API keys or cloud tokens are ever used.
+        <p className="text-xs text-zinc-400 leading-relaxed">
+          Ambient Shield uses zero cloud tokens or external keys. All model inference executes privately on your hardware via Ollama.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 font-mono text-xs">
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--text)" }}>
-            Inference Engine
+          <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+            Inference Provider
           </label>
           <select
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl text-sm outline-none transition-all duration-200"
-            style={{
-              background: "var(--bg1)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-            }}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
           >
-            <option value="ollama">Ollama (Local daemon at localhost:11434)</option>
-            <option value="offscreen">In-Browser WebLLM (Offscreen fallback stub)</option>
+            <option value="ollama">Ollama (Daemon at localhost:11434)</option>
+            <option value="offscreen">In-Browser Offscreen Fallback (Local stub)</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--text)" }}>
+          <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
             Ollama Endpoint
           </label>
           <input
             type="text"
             value={ollamaHost}
             onChange={(e) => setOllamaHost(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl text-sm outline-none transition-all duration-200 font-mono"
-            style={{
-              background: "var(--bg1)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-            }}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
             placeholder="http://localhost:11434"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--text)" }}>
-            Model Name
+          <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+            Model Identifier
           </label>
           <input
             type="text"
             value={ollamaModel}
             onChange={(e) => setOllamaModel(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl text-sm outline-none transition-all duration-200 font-mono"
-            style={{
-              background: "var(--bg1)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-            }}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
             placeholder="gemma3:4b"
           />
-          <p className="text-[11px] mt-1" style={{ color: "var(--text3)" }}>
-            Recommended: <code className="text-[11px]">gemma3:4b</code> (text & reasoning) or <code className="text-[11px]">gemma2:2b</code> (lightweight).
+          <p className="text-[11px] text-zinc-500 mt-1 font-sans">
+            Recommended: <code className="text-zinc-400">gemma3:4b</code> (default) or <code className="text-zinc-400">gemma2:2b</code> (low VRAM).
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--text)" }}>
-            Timeout (seconds)
+          <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+            Inference Timeout (Seconds)
           </label>
           <input
             type="number"
@@ -211,25 +197,20 @@ export default function SettingsForm() {
             max="180"
             value={timeoutSec}
             onChange={(e) => setTimeoutSec(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl text-sm outline-none transition-all duration-200"
-            style={{
-              background: "var(--bg1)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-            }}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
           />
         </div>
 
-        <div className="pt-2 border-t border-[var(--border)] space-y-3">
+        <div className="pt-3 border-t border-zinc-850 space-y-2.5 font-sans">
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={localOnlyMode}
               onChange={(e) => setLocalOnlyMode(e.target.checked)}
-              className="rounded"
+              className="rounded bg-zinc-900 border-zinc-800 accent-white"
             />
-            <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
-              Strict Local-Only Mode (Disable outbound search queries)
+            <span className="text-xs text-zinc-300">
+              Strict Offline-Only Mode (Disable outbound retrieval queries)
             </span>
           </label>
 
@@ -238,50 +219,51 @@ export default function SettingsForm() {
               type="checkbox"
               checked={debugLog}
               onChange={(e) => setDebugLog(e.target.checked)}
-              className="rounded"
+              className="rounded bg-zinc-900 border-zinc-800 accent-white"
             />
-            <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
-              Enable Detailed Debug Logging in Console
+            <span className="text-xs text-zinc-300">
+              Enable Verbose Debug Logs in DevTools Console
             </span>
           </label>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <Button onClick={handleSave}>
-          Save Settings
+        <Button onClick={handleSave} className="h-9 px-5 text-xs font-semibold">
+          Save Configuration
         </Button>
         <button
           type="button"
           onClick={runHealthCheck}
           disabled={checking}
-          className="px-4 py-2 rounded-xl text-sm border font-medium transition-all"
-          style={{
-            borderColor: "var(--border2)",
-            color: "var(--text)",
-            background: "var(--bg3)",
-          }}
+          className="h-9 px-4 rounded-lg text-xs font-mono border border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-850 transition-colors flex items-center gap-2"
         >
-          {checking ? "Checking Ollama..." : "Test Ollama Connection"}
+          {checking ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Pinging Ollama…
+            </>
+          ) : (
+            "Ping Connection"
+          )}
         </button>
       </div>
 
       {healthStatus.tested && (
         <div
-          className="p-3 rounded-xl border text-xs leading-relaxed"
-          style={{
-            background: healthStatus.ok ? "rgba(62, 207, 142, 0.1)" : "rgba(255, 77, 109, 0.1)",
-            borderColor: healthStatus.ok ? "rgba(62, 207, 142, 0.3)" : "rgba(255, 77, 109, 0.3)",
-            color: healthStatus.ok ? "var(--safe)" : "var(--danger)",
-          }}
+          className={`p-3 rounded-lg border text-xs font-mono leading-relaxed ${
+            healthStatus.ok
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+          }`}
         >
           <div className="font-semibold mb-1">
-            {healthStatus.ok ? "✓ Engine Healthy" : "⚠ Provider Notice"}
+            {healthStatus.ok ? "✓ DAEMON HEALTHY" : "✕ CONNECTION NOTICE"}
           </div>
           <div>{healthStatus.message}</div>
           {healthStatus.models && healthStatus.models.length > 0 && (
-            <div className="mt-2 text-[11px] opacity-80">
-              Installed Ollama models: {healthStatus.models.join(", ")}
+            <div className="mt-1.5 text-[11px] opacity-80">
+              Installed Models: {healthStatus.models.join(", ")}
             </div>
           )}
         </div>

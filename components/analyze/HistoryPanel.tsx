@@ -2,24 +2,21 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Clock, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, Trash2, X, FileText, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSessionHistory, type ScanHistoryItem } from "@/hooks/useSessionHistory";
 
-// ── Props ────────────────────────────────────────────────────────────────────
 interface HistoryPanelProps {
-  /** Called when the user clicks a history item to restore it */
   onRestore: (item: ScanHistoryItem) => void;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 const TYPE_META: Record<
   ScanHistoryItem["type"],
-  { icon: string; label: string; color: string }
+  { icon: React.ReactNode; label: string }
 > = {
-  policy:    { icon: "📄", label: "Privacy Policy", color: "var(--accent)" },
-  factcheck: { icon: "✅", label: "Fact Check",     color: "var(--safe)"   },
-  image:     { icon: "🖼️", label: "Image Scan",     color: "var(--caution)"},
+  policy:    { icon: <FileText size={13} className="text-white" />, label: "POLICY" },
+  factcheck: { icon: <CheckCircle2 size={13} className="text-white" />, label: "FACT & JOB" },
+  image:     { icon: <ImageIcon size={13} className="text-white" />, label: "MEDIA" },
 };
 
 function relativeTime(ts: number): string {
@@ -34,26 +31,46 @@ function relativeTime(ts: number): string {
   return `${d}d ago`;
 }
 
-/** Extract a human-readable verdict/risk badge label from a result object */
-function getResultBadge(item: ScanHistoryItem): { label: string; color: string } | null {
+function getResultBadge(item: ScanHistoryItem): { label: string; colorClass: string } | null {
   const r = item.result as Record<string, unknown>;
   if (item.type === "policy" && typeof r.riskLevel === "string") {
-    const colors: Record<string, string> = { SAFE: "var(--safe)", CAUTION: "var(--caution)", DANGER: "var(--danger)" };
-    return { label: r.riskLevel as string, color: colors[r.riskLevel as string] ?? "var(--text2)" };
+    const isSafe = r.riskLevel === "SAFE";
+    const isDanger = r.riskLevel === "DANGER";
+    return {
+      label: r.riskLevel as string,
+      colorClass: isSafe
+        ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+        : isDanger
+        ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
+        : "text-amber-400 border-amber-500/30 bg-amber-500/10",
+    };
   }
   if (item.type === "factcheck" && typeof r.verdict === "string") {
-    const colors: Record<string, string> = { TRUE: "var(--safe)", LIKELY_TRUE: "var(--safe)", UNVERIFIED: "var(--accent)", MISLEADING: "var(--caution)", FALSE: "var(--danger)", SATIRE: "#a78bfa" };
-    const labels: Record<string, string> = { TRUE: "True", LIKELY_TRUE: "Likely True", UNVERIFIED: "Unverified", MISLEADING: "Misleading", FALSE: "False", SATIRE: "Satire" };
-    return { label: labels[r.verdict as string] ?? (r.verdict as string), color: colors[r.verdict as string] ?? "var(--text2)" };
+    const v = (r.verdict as string).toUpperCase();
+    const isPass = v.includes("TRUE") || v.includes("SUPPORTED") || v.includes("LEGITIMATE");
+    const isFail = v.includes("FALSE") || v.includes("CONTRADICTED") || v.includes("SCAM");
+    return {
+      label: r.verdict as string,
+      colorClass: isPass
+        ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+        : isFail
+        ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
+        : "text-amber-400 border-amber-500/30 bg-amber-500/10",
+    };
   }
   if (item.type === "image" && typeof r.category === "string") {
-    const colors: Record<string, string> = { CLEAN: "var(--safe)", EDUCATIONAL: "var(--safe)", ADULT: "var(--danger)", VIOLENCE: "var(--danger)", DEEPFAKE: "var(--caution)", ADULT_AD: "var(--danger)" };
-    return { label: r.category as string, color: colors[r.category as string] ?? "var(--text2)" };
+    const cat = r.category as string;
+    const isClean = cat === "CLEAN" || cat === "EDUCATIONAL";
+    return {
+      label: cat,
+      colorClass: isClean
+        ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+        : "text-amber-400 border-amber-500/30 bg-amber-500/10",
+    };
   }
   return null;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
 export default function HistoryPanel({ onRestore }: HistoryPanelProps) {
   const { history, deleteHistoryItem, clearHistory } = useSessionHistory();
   const [open, setOpen] = useState(false);
@@ -61,42 +78,29 @@ export default function HistoryPanel({ onRestore }: HistoryPanelProps) {
   if (history.length === 0 && !open) return null;
 
   return (
-    <div
-      className="rounded-[var(--radius)] overflow-hidden mt-8"
-      style={{ border: "1px solid var(--border)", background: "var(--bg2)" }}
-    >
+    <div className="rounded-xl overflow-hidden mt-8 border border-zinc-800 bg-zinc-950">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <button
         id="history-panel-toggle"
-        className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors duration-150 hover:bg-[var(--bg3)]"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-zinc-900/50"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
         <div className="flex items-center gap-2.5">
-          <Clock size={15} style={{ color: "var(--accent)" }} />
-          <span
-            className="text-sm font-semibold"
-            style={{ fontFamily: "Syne, sans-serif", color: "var(--text)" }}
-          >
-            Recent Scans
+          <Clock size={14} className="text-zinc-400" />
+          <span className="text-xs font-semibold text-white tracking-tight">
+            Session History Log
           </span>
           {history.length > 0 && (
-            <span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-              style={{
-                background: "rgba(91,156,246,0.15)",
-                color: "var(--accent)",
-                border: "1px solid rgba(91,156,246,0.25)",
-              }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
               {history.length}
             </span>
           )}
         </div>
         {open ? (
-          <ChevronUp size={15} style={{ color: "var(--text3)" }} />
+          <ChevronUp size={14} className="text-zinc-500" />
         ) : (
-          <ChevronDown size={15} style={{ color: "var(--text3)" }} />
+          <ChevronDown size={14} className="text-zinc-500" />
         )}
       </button>
 
@@ -108,33 +112,27 @@ export default function HistoryPanel({ onRestore }: HistoryPanelProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
             style={{ overflow: "hidden" }}
           >
-            <div style={{ borderTop: "1px solid var(--border)" }}>
+            <div className="border-t border-zinc-850">
               {history.length === 0 ? (
-                /* ── Empty state ──────────────────────────────────────────── */
-                <div className="px-5 py-10 text-center">
-                  <p className="text-sm" style={{ color: "var(--text3)" }}>
-                    No recent scans. Results will appear here after your first analysis.
-                  </p>
+                <div className="px-5 py-8 text-center text-xs font-mono text-zinc-500">
+                  NO PREVIOUS QUERIES IN CURRENT WORKSPACE SESSION.
                 </div>
               ) : (
                 <>
-                  {/* ── Item list ─────────────────────────────────────────── */}
-                  <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+                  <ul className="divide-y divide-zinc-900 font-mono text-xs">
                     {history.map((item) => {
                       const meta = TYPE_META[item.type];
                       const badge = getResultBadge(item);
                       return (
                         <li key={item.id}>
-                          <div className="flex items-center gap-3 px-5 py-3 group hover:bg-[var(--bg3)] transition-colors duration-150">
-                            {/* Type icon */}
-                            <span className="text-xl shrink-0 select-none" aria-hidden>
+                          <div className="flex items-center gap-3 px-5 py-3 group hover:bg-zinc-900/40 transition-colors">
+                            <span className="p-1 rounded bg-zinc-900 border border-zinc-800 shrink-0">
                               {meta.icon}
                             </span>
 
-                            {/* Main content — clickable restore area */}
                             <button
                               className="flex-1 text-left min-w-0"
                               onClick={() => onRestore(item)}
@@ -142,50 +140,32 @@ export default function HistoryPanel({ onRestore }: HistoryPanelProps) {
                               id={`history-item-${item.id}`}
                             >
                               <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                <span
-                                  className="text-[10px] font-semibold uppercase tracking-wider"
-                                  style={{ color: meta.color }}
-                                >
+                                <span className="text-[10px] font-mono font-semibold tracking-wider text-zinc-400">
                                   {meta.label}
                                 </span>
                                 {badge && (
-                                  <span
-                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                    style={{
-                                      background: `${badge.color}18`,
-                                      color: badge.color,
-                                      border: `1px solid ${badge.color}40`,
-                                    }}
-                                  >
+                                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${badge.colorClass}`}>
                                     {badge.label}
                                   </span>
                                 )}
                               </div>
-                              <p
-                                className="text-xs truncate"
-                                style={{ color: "var(--text2)", maxWidth: 420 }}
-                              >
+                              <p className="text-xs text-zinc-300 truncate max-w-md font-sans">
                                 {item.input || "—"}
                               </p>
                             </button>
 
-                            {/* Timestamp + delete */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span
-                                className="text-[10px] hidden sm:block"
-                                style={{ color: "var(--text3)" }}
-                              >
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="text-[10px] text-zinc-600 hidden sm:block">
                                 {relativeTime(item.timestamp)}
                               </span>
                               <button
                                 onClick={() => deleteHistoryItem(item.id)}
-                                className="p-1.5 rounded-lg transition-colors duration-150 opacity-0 group-hover:opacity-100"
-                                style={{ color: "var(--text3)" }}
-                                title="Delete this entry"
+                                className="p-1 rounded transition-colors text-zinc-600 hover:text-rose-400 opacity-0 group-hover:opacity-100"
+                                title="Delete entry"
                                 aria-label="Delete scan"
                                 id={`history-delete-${item.id}`}
                               >
-                                <X size={13} />
+                                <X size={12} />
                               </button>
                             </div>
                           </div>
@@ -194,24 +174,17 @@ export default function HistoryPanel({ onRestore }: HistoryPanelProps) {
                     })}
                   </ul>
 
-                  {/* ── Footer ───────────────────────────────────────────── */}
-                  <div
-                    className="flex items-center justify-between px-5 py-3"
-                    style={{ borderTop: "1px solid var(--border)" }}
-                  >
-                    <span className="text-xs" style={{ color: "var(--text3)" }}>
-                      Auto-clears after 24 hours
-                    </span>
+                  <div className="flex items-center justify-between px-5 py-2.5 border-t border-zinc-900 bg-zinc-950 text-[11px] font-mono text-zinc-500">
+                    <span>ON-DEVICE STORAGE ONLY</span>
                     <Button
                       id="history-clear-all"
                       variant="ghost"
                       size="sm"
                       onClick={clearHistory}
-                      className="gap-1.5 text-xs"
-                      style={{ color: "var(--danger)" }}
+                      className="h-6 text-xs font-mono text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 gap-1"
                     >
-                      <Trash2 size={12} />
-                      Clear History
+                      <Trash2 size={11} />
+                      PURGE LOG
                     </Button>
                   </div>
                 </>

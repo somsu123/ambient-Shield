@@ -16,7 +16,7 @@ function getColor(score: number): string {
 
 function getLabel(score: number): string {
   if (score >= 70) return "High";
-  if (score >= 40) return "Medium";
+  if (score >= 40) return "Moderate";
   return "Low";
 }
 
@@ -24,8 +24,8 @@ const DURATION = 900; // ms
 
 export default function CredibilityRing({
   score,
-  size = 120,
-  strokeWidth = 9,
+  size = 110,
+  strokeWidth = 7,
 }: CredibilityRingProps) {
   const clamped = Math.max(0, Math.min(100, score));
   const color   = getColor(clamped);
@@ -45,13 +45,11 @@ export default function CredibilityRing({
   const startRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Reset state each time score changes so the animation replays cleanly
     setDisplayScore(0);
     setOffset(circumference);
     startRef.current = null;
 
     const animate = (ts: number) => {
-      // Use strict null check — ts could legitimately be 0 on first frame
       if (startRef.current === null) startRef.current = ts;
 
       const elapsed  = ts - startRef.current;
@@ -93,7 +91,7 @@ export default function CredibilityRing({
             cy={center}
             r={radius}
             fill="none"
-            stroke="var(--bg4)"
+            stroke="#27272a"
             strokeWidth={strokeWidth}
           />
           {/* Animated progress ring — starts at top (rotate -90°) */}
@@ -109,23 +107,23 @@ export default function CredibilityRing({
             strokeDashoffset={offset}
             transform={`rotate(-90 ${center} ${center})`}
             style={{
-              filter: `drop-shadow(0 0 6px ${color}88)`,
+              filter: `drop-shadow(0 0 6px ${color}66)`,
               transition: "stroke 0.3s ease",
             }}
           />
         </svg>
 
-        {/* Center score label — hidden from screen readers (SVG aria-label covers it) */}
+        {/* Center score label */}
         <div
           className="absolute inset-0 flex flex-col items-center justify-center select-none"
           aria-hidden={true}
         >
           <span
-            className="text-2xl font-bold leading-none"
-            style={{ fontFamily: "Syne, sans-serif", color }}
+            className="text-xl font-bold font-mono tracking-tight leading-none"
+            style={{ color }}
           >
             {displayScore}
-            <span className="text-sm font-normal">%</span>
+            <span className="text-xs font-normal text-zinc-400 ml-0.5">%</span>
           </span>
         </div>
       </div>
@@ -133,7 +131,7 @@ export default function CredibilityRing({
       {/* Credibility label below ring */}
       <div className="text-center">
         <span
-          className="text-xs font-semibold uppercase tracking-widest"
+          className="text-[10px] font-mono font-semibold uppercase tracking-wider"
           style={{ color }}
         >
           {label} Credibility

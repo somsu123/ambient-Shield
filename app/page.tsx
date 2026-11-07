@@ -10,142 +10,78 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowRight, ShieldCheck, Zap, ScanSearch, Github } from "lucide-react";
+import { ArrowRight, Shield, Zap, Search, Github, Lock, CheckCircle2, FileText, Image as ImageIcon } from "lucide-react";
 
 const features = [
   {
     id: "privacy-analyzer",
-    icon: "📄",
-    lucideIcon: null,
+    icon: <FileText size={20} className="text-white" />,
     title: "Privacy Policy Analyzer",
     description:
-      "Understand what apps really collect. Paste any privacy policy and get a plain-English breakdown of data risks, tracking, and red flags — in seconds.",
-    badge: "Policy Scanner",
-    badgeColor: "var(--accent)",
+      "Instant breakdown of data traps, third-party tracking, and hidden liabilities in terms of service without reading legalese.",
+    badge: "100% OFFLINE HEURISTICS",
   },
   {
     id: "misinformation-scanner",
-    icon: "✅",
-    lucideIcon: null,
-    title: "Misinformation Scanner",
+    icon: <Search size={20} className="text-white" />,
+    title: "Misinformation & Job Scam Scanner",
     description:
-      "Fact-check claims instantly. Analyze text or headlines for accuracy signals, source reliability, and misinformation patterns before you share.",
-    badge: "Fact Checker",
-    badgeColor: "var(--safe)",
+      "Evaluates news claims and recruitment notices against multi-source evidence and runs 7 critical verification checks via local Gemma.",
+    badge: "MULTI-SOURCE RETRIEVAL",
   },
   {
     id: "deepfake-detector",
-    icon: "🖼️",
-    lucideIcon: null,
-    title: "Deepfake Detector",
+    icon: <ImageIcon size={20} className="text-white" />,
+    title: "Deepfake & Image Forensics",
     description:
-      "Spot manipulated images. Upload or link any image and our AI will surface authenticity signals, metadata anomalies, and manipulation probability.",
-    badge: "Image AI",
-    badgeColor: "var(--caution)",
+      "Surfaces visual authenticity signals, compression artifacts, and digital manipulation indicators with full privacy preservation.",
+    badge: "LOCAL MULTIMODAL",
   },
 ];
 
 const stats = [
-  { value: "100%", label: "Free forever" },
-  { value: "0", label: "Accounts needed" },
-  { value: "0kb", label: "Data we store" },
+  { value: "0 kB", label: "CLOUD TELEMETRY" },
+  { value: "100%", label: "ON-DEVICE INFERENCE" },
+  { value: "0", label: "API KEYS REQUIRED" },
 ];
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-black text-white">
       <Navbar />
 
       <main className="flex-1">
         {/* ── Hero ───────────────────────────────── */}
-        <section
-          className="relative overflow-hidden"
-          style={{ padding: "100px 24px 80px" }}
-        >
-          {/* Background glows */}
-          <div
-            className="glow-blob animate-glow-pulse"
-            style={{
-              width: 600,
-              height: 600,
-              background: "var(--accent)",
-              top: -200,
-              left: "50%",
-              transform: "translateX(-50%)",
-            }}
-          />
-          <div
-            className="glow-blob"
-            style={{
-              width: 300,
-              height: 300,
-              background: "var(--safe)",
-              top: 100,
-              right: "10%",
-              opacity: 0.07,
-            }}
-          />
+        <section className="relative px-6 pt-24 pb-20 border-b border-zinc-850 overflow-hidden">
+          {/* Subtle top spotlight */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-white/[0.04] blur-[100px] pointer-events-none" />
 
           <div className="relative max-w-4xl mx-auto text-center">
-            {/* Label chip */}
+            {/* 21st.dev Badge Chip */}
             <div className="inline-flex items-center gap-2 mb-8">
-              <span
-                className="label-sm"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "100px",
-                  border: "1px solid rgba(91,156,246,0.25)",
-                  background: "rgba(91,156,246,0.08)",
-                  color: "var(--accent)",
-                }}
-              >
-                <ShieldCheck size={12} strokeWidth={2.5} />
-                Your Quiet Digital Protector
+              <span className="mono-tag text-xs py-1 px-3 bg-zinc-950 border-zinc-800 text-zinc-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                AUTONOMOUS DIGITAL DEFENSE &middot; ZERO CLOUD EXPOSURE
               </span>
             </div>
 
-            {/* Main heading */}
-            <h1
-              className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 leading-tight"
-              style={{
-                fontFamily: "Syne, sans-serif",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-              }}
-            >
-              <span style={{ color: "var(--text)" }}>Ambient</span>{" "}
-              <span
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--accent) 0%, #a5c8ff 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                Shield
-              </span>
+            {/* Main Heading */}
+            <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.08]">
+              Verify anything. <br />
+              <span className="text-zinc-500">Leak nothing.</span>
             </h1>
 
             {/* Subtitle */}
-            <p
-              className="text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
-              style={{ color: "var(--text2)" }}
-            >
-              Your quiet digital protector against privacy traps and digital
-              deception. Analyze policies, detect misinformation, and spot
-              deepfakes — all in one place.
+            <p className="text-base sm:text-lg max-w-2xl mx-auto mb-10 text-zinc-400 font-normal leading-relaxed">
+              Ambient Shield runs locally on your device to dismantle predatory privacy policies, verify job offers, expose misinformation, and inspect media authenticity.
             </p>
 
-            {/* CTA */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button asChild size="xl" id="hero-cta-button">
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button asChild size="lg" id="hero-cta-button" className="h-11 px-7 text-sm font-semibold">
                 <Link href="/analyze" className="flex items-center gap-2">
-                  Start Protecting Yourself
-                  <ArrowRight size={18} />
+                  Launch Local Analyzer
+                  <ArrowRight size={16} />
                 </Link>
               </Button>
               <Button
@@ -153,28 +89,20 @@ export default function HomePage() {
                 size="lg"
                 variant="outline"
                 id="hero-learn-more-button"
+                className="h-11 px-6 text-sm"
               >
-                <Link href="#features">See What We Detect</Link>
+                <Link href="#features">Architecture &amp; Features</Link>
               </Button>
             </div>
 
-            {/* Trust stats */}
-            <div className="flex flex-wrap items-center justify-center gap-8 mt-14">
+            {/* Telemetry Stats */}
+            <div className="grid grid-cols-3 max-w-lg mx-auto gap-4 mt-16 pt-8 border-t border-zinc-850">
               {stats.map((stat) => (
                 <div key={stat.label} className="text-center">
-                  <div
-                    className="text-2xl font-bold"
-                    style={{
-                      fontFamily: "Syne, sans-serif",
-                      color: "var(--accent)",
-                    }}
-                  >
+                  <div className="text-2xl font-bold font-mono text-white tracking-tight">
                     {stat.value}
                   </div>
-                  <div
-                    className="text-xs mt-0.5"
-                    style={{ color: "var(--text3)" }}
-                  >
+                  <div className="text-[10px] font-mono text-zinc-500 mt-1 uppercase tracking-wider">
                     {stat.label}
                   </div>
                 </div>
@@ -184,238 +112,143 @@ export default function HomePage() {
         </section>
 
         {/* ── Features ────────────────────────────── */}
-        <section
-          id="features"
-          className="max-w-6xl mx-auto px-6 py-20"
-        >
-          {/* Section header */}
-          <div className="text-center mb-14">
-            <span className="label-sm block mb-3">Three Shields</span>
-            <h2
-              className="text-3xl sm:text-4xl font-bold"
-              style={{ fontFamily: "Syne, sans-serif", color: "var(--text)" }}
-            >
-              Everything you need to stay protected
-            </h2>
-            <p
-              className="mt-4 text-sm max-w-lg mx-auto"
-              style={{ color: "var(--text2)" }}
-            >
-              Paste text, upload images, or link URLs. Ambient Shield does the
-              heavy lifting — no tech knowledge required.
+        <section id="features" className="max-w-6xl mx-auto px-6 py-20">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4 pb-6 border-b border-zinc-850">
+            <div>
+              <span className="label-sm text-zinc-500 block mb-2 font-mono">
+                [ VERIFICATION SUITE ]
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                Engineered for uncompromising fidelity
+              </h2>
+            </div>
+            <p className="text-xs font-mono text-zinc-400 max-w-xs">
+              Direct offline parsing, multi-source retrieval, and Gemma evaluation with zero telemetry.
             </p>
           </div>
 
-          {/* Cards grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {features.map((feature, i) => (
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {features.map((feature) => (
               <Card
                 key={feature.id}
-                className="group flex flex-col"
-                style={{
-                  animationDelay: `${i * 100}ms`,
-                }}
+                className="group flex flex-col justify-between bg-zinc-950/70 border-zinc-850 hover:border-zinc-700 transition-all p-6"
               >
-                <CardHeader>
-                  {/* Icon */}
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 select-none transition-transform duration-200 group-hover:scale-110"
-                    style={{
-                      background: "var(--bg3)",
-                      border: "1px solid var(--border2)",
-                    }}
-                  >
-                    {feature.icon}
+                <div>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-850 flex items-center justify-center">
+                      {feature.icon}
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+                      {feature.badge}
+                    </span>
                   </div>
-                  {/* Badge */}
-                  <span
-                    className="label-sm mb-1"
-                    style={{ color: feature.badgeColor }}
-                  >
-                    {feature.badge}
-                  </span>
-                  <CardTitle>{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <CardDescription className="text-sm leading-relaxed">
+
+                  <CardTitle className="text-lg font-semibold text-white mb-2">
+                    {feature.title}
+                  </CardTitle>
+
+                  <CardDescription className="text-xs text-zinc-400 leading-relaxed">
                     {feature.description}
                   </CardDescription>
-                </CardContent>
-                <CardFooter>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-zinc-900">
                   <Link
                     href="/analyze"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 group/link"
-                    style={{ color: "var(--accent)" }}
+                    className="inline-flex items-center gap-1.5 text-xs font-mono uppercase text-zinc-400 hover:text-white transition-colors"
                     id={`feature-link-${feature.id}`}
                   >
-                    Try it
-                    <ArrowRight
-                      size={14}
-                      className="transition-transform duration-200 group-hover/link:translate-x-1"
-                    />
+                    Run Analyzer
+                    <ArrowRight size={12} />
                   </Link>
-                </CardFooter>
+                </div>
               </Card>
             ))}
           </div>
         </section>
 
-        {/* ── How it works ────────────────────────── */}
-        <section
-          className="py-20 px-6"
-          style={{
-            background:
-              "linear-gradient(180deg, transparent 0%, var(--bg2) 30%, var(--bg2) 70%, transparent 100%)",
-          }}
-        >
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <span className="label-sm block mb-3">Simple by design</span>
-              <h2
-                className="text-3xl font-bold"
-                style={{ fontFamily: "Syne, sans-serif", color: "var(--text)" }}
-              >
-                Zero friction. Maximum clarity.
+        {/* ── How It Works ────────────────────────── */}
+        <section className="border-y border-zinc-850 bg-zinc-950/50 py-20 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-14">
+              <span className="label-sm text-zinc-500 block mb-2 font-mono">
+                [ EXECUTION PIPELINE ]
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                How Ambient Shield processes data
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 {
                   step: "01",
-                  icon: <ScanSearch size={22} style={{ color: "var(--accent)" }} />,
-                  title: "Paste Content or URL",
-                  desc: "Drop in a privacy policy, a suspicious claim, or a link to an image you want checked.",
+                  title: "Direct Input or Context Menu",
+                  desc: "Paste text or right-click any page in Chrome. No login, token authorization, or account setup required.",
                 },
                 {
                   step: "02",
-                  icon: <Zap size={22} style={{ color: "var(--caution)" }} />,
-                  title: "Instant Cache or Local AI",
-                  desc: "Identical inputs return cached results instantly. New inputs are processed privately by your local Gemma model.",
+                  title: "Multi-Source Retrieval & Evidence",
+                  desc: "Queries DuckDuckGo Lite, Wikipedia, and Google News without tracking. Drops all non-substantive claims.",
                 },
                 {
                   step: "03",
-                  icon: <ShieldCheck size={22} style={{ color: "var(--safe)" }} />,
-                  title: "Clear, Calm Results",
-                  desc: "Get a risk score and plain-English explanation. No jargon, no noise, no account needed.",
+                  title: "Local Gemma Judgment",
+                  desc: "Gemma model runs on your machine via Ollama. Real-date time paradox checks and verifiable citations are strictly enforced.",
                 },
               ].map((item) => (
-                <div key={item.step} className="text-center">
-                  <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{
-                      background: "var(--bg3)",
-                      border: "1px solid var(--border)",
-                    }}
-                  >
-                    {item.icon}
+                <div
+                  key={item.step}
+                  className="p-6 rounded-lg bg-black border border-zinc-850 flex flex-col justify-between"
+                >
+                  <div>
+                    <span className="text-xs font-mono font-bold text-zinc-600 block mb-3">
+                      STEP {item.step}
+                    </span>
+                    <h3 className="text-sm font-semibold text-white mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      {item.desc}
+                    </p>
                   </div>
-                  <span
-                    className="label-sm block mb-2"
-                    style={{ color: "var(--text3)" }}
-                  >
-                    Step {item.step}
-                  </span>
-                  <h3
-                    className="text-base font-bold mb-2"
-                    style={{
-                      fontFamily: "Syne, sans-serif",
-                      color: "var(--text)",
-                    }}
-                  >
-                    {item.title}
-                  </h3>
-                  <p className="text-sm" style={{ color: "var(--text2)" }}>
-                    {item.desc}
-                  </p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── Final CTA ───────────────────────────── */}
-        <section className="max-w-3xl mx-auto px-6 py-24 text-center">
-          <div
-            className="relative rounded-2xl px-8 py-14 overflow-hidden"
-            style={{
-              background: "var(--bg2)",
-              border: "1px solid var(--border2)",
-              boxShadow: "0 0 80px rgba(91,156,246,0.06)",
-            }}
-          >
-            {/* Glow */}
-            <div
-              className="glow-blob animate-glow-pulse"
-              style={{
-                width: 400,
-                height: 300,
-                background: "var(--accent2)",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                opacity: 0.1,
-              }}
-            />
-            <div className="relative">
-              <span className="label-sm block mb-4">Ready when you are</span>
-              <h2
-                className="text-3xl sm:text-4xl font-extrabold mb-4"
-                style={{
-                  fontFamily: "Syne, sans-serif",
-                  color: "var(--text)",
-                }}
-              >
-                Your digital safety matters
+        {/* ── Final Call to Action ───────────────────────────── */}
+        <section className="max-w-4xl mx-auto px-6 py-24 text-center">
+          <div className="relative rounded-2xl p-10 sm:p-14 border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <div className="max-w-xl mx-auto">
+              <span className="mono-tag text-xs mb-4">
+                READY TO OPERATE
+              </span>
+              <h2 className="text-3xl font-bold tracking-tight text-white mb-3">
+                Complete digital sovereignty
               </h2>
-              <p
-                className="text-sm mb-8 max-w-md mx-auto"
-                style={{ color: "var(--text2)" }}
-              >
-                No account. No credit card. No data stored. Just powerful,
-                free tools to keep you protected online.
+              <p className="text-xs sm:text-sm text-zinc-400 mb-8 leading-relaxed">
+                No credit cards. No cloud logging. Completely open, private, and powered by local open weights.
               </p>
-              {/* Trust badges */}
-              <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-                {[
-                  { icon: "🔒", text: "No signup" },
-                  { icon: "🗑️", text: "No data stored" },
-                  { icon: "✨", text: "Free to use" },
-                ].map((badge) => (
-                  <span
-                    key={badge.text}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
-                    style={{
-                      background: "var(--bg3)",
-                      border: "1px solid var(--border2)",
-                      color: "var(--text2)",
-                    }}
-                  >
-                    <span>{badge.icon}</span>
-                    {badge.text}
-                  </span>
-                ))}
-              </div>
 
-              <Button asChild size="xl" id="bottom-cta-button">
-                <Link href="/analyze" className="flex items-center gap-2">
-                  Start Protecting Yourself
-                  <ArrowRight size={18} />
-                </Link>
-              </Button>
-
-              {/* GitHub link */}
-              <div className="mt-6">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button asChild size="lg" id="bottom-cta-button" className="h-10 px-6 text-xs font-semibold">
+                  <Link href="/analyze" className="flex items-center gap-2">
+                    Open Web Dashboard
+                    <ArrowRight size={14} />
+                  </Link>
+                </Button>
                 <a
                   href="https://github.com/ambient-shield/ambient-shield"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs transition-colors duration-200"
-                  style={{ color: "var(--text3)" }}
+                  className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white px-4 py-2 rounded-md border border-zinc-800 bg-black transition-colors"
                   id="github-link"
                 >
                   <Github size={13} />
-                  View on GitHub
+                  GitHub Repository
                 </a>
               </div>
             </div>

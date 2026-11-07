@@ -4,21 +4,22 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ambient Shield",
+  title: "Ambient Shield — Autonomous Verification & Privacy Engine",
   description:
-    "Your quiet digital protector against privacy traps and digital deception. Analyze privacy policies, detect misinformation, and spot deepfakes — free for everyone.",
+    "Zero-cloud local verification engine. Analyze privacy policies, spot job scams, fact-check claims, and detect manipulated media with 100% on-device local intelligence.",
   keywords: [
     "privacy policy analyzer",
     "deepfake detector",
     "misinformation scanner",
+    "job scam verifier",
     "cybersecurity",
-    "digital protection",
+    "local AI",
   ],
   authors: [{ name: "Ambient Shield" }],
   openGraph: {
-    title: "Ambient Shield",
+    title: "Ambient Shield — Zero-Cloud Digital Protector",
     description:
-      "Your quiet digital protector against privacy traps and digital deception.",
+      "100% local privacy and credibility analysis running privately on your machine.",
     type: "website",
   },
 };
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -38,22 +39,23 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased min-h-screen" style={{ background: "var(--bg)" }}>
+      <body className="antialiased min-h-screen bg-black text-white font-sans selection:bg-zinc-800 selection:text-white">
         {children}
         <Toaster
           theme="dark"
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "var(--bg3)",
-              border: "1px solid var(--border2)",
-              color: "var(--text)",
-              fontFamily: "DM Sans, sans-serif",
+              background: "#09090b",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              color: "#ffffff",
+              fontFamily: "Inter, sans-serif",
               fontSize: "13px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.8)",
             },
           }}
         />

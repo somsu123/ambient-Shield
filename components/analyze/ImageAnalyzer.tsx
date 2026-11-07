@@ -17,12 +17,10 @@ import { useSessionHistory } from "@/hooks/useSessionHistory";
 import type { ScanHistoryItem } from "@/hooks/useSessionHistory";
 import { hashKey } from "@/lib/hash";
 
-// ── Props ─────────────────────────────────────────────────────────────────────
 interface ImageAnalyzerProps {
   onRemainingUpdate?: (n: number) => void;
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
 type InputMode = "url" | "file";
 
 interface State {
@@ -44,25 +42,23 @@ const INITIAL: State = {
   remainingCalls: 0, error: null,
 };
 
-// ── Category config ────────────────────────────────────────────────────────────
 interface CategoryCfg { label: string; icon: string; color: string; bg: string; border: string; }
 
 const CATEGORY_MAP: Record<string, CategoryCfg> = {
-  CLEAN:       { label: "Clean",         icon: "✅", color: "var(--safe)",    bg: "rgba(62,207,142,0.08)",  border: "rgba(62,207,142,0.25)"  },
-  EDUCATIONAL: { label: "Educational",   icon: "📚", color: "var(--safe)",    bg: "rgba(62,207,142,0.08)",  border: "rgba(62,207,142,0.25)"  },
-  DEEPFAKE:    { label: "Deepfake",      icon: "🎭", color: "var(--caution)", bg: "rgba(245,166,35,0.08)",  border: "rgba(245,166,35,0.25)"  },
-  ADULT:       { label: "Adult Content", icon: "🔞", color: "var(--danger)",  bg: "rgba(255,77,109,0.08)",  border: "rgba(255,77,109,0.25)"  },
-  ADULT_AD:    { label: "Adult Ad",      icon: "🔞", color: "var(--danger)",  bg: "rgba(255,77,109,0.08)",  border: "rgba(255,77,109,0.25)"  },
-  VIOLENCE:    { label: "Violence",      icon: "⚠️", color: "var(--danger)",  bg: "rgba(255,77,109,0.08)",  border: "rgba(255,77,109,0.25)"  },
+  CLEAN:       { label: "Clean / Authentic", icon: "✓", color: "var(--safe)",    bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.25)"  },
+  EDUCATIONAL: { label: "Educational",       icon: "✓", color: "var(--safe)",    bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.25)"  },
+  DEEPFAKE:    { label: "Manipulated Media", icon: "⚠", color: "var(--caution)", bg: "rgba(234,179,8,0.08)",  border: "rgba(234,179,8,0.25)"  },
+  ADULT:       { label: "Restricted Adult",  icon: "✕", color: "var(--danger)",  bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.25)"  },
+  ADULT_AD:    { label: "Restricted Ad",     icon: "✕", color: "var(--danger)",  bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.25)"  },
+  VIOLENCE:    { label: "Flagged Content",   icon: "✕", color: "var(--danger)",  bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.25)"  },
 };
 
 const PHASE_LABEL: Record<number, string> = {
   1: "URL Heuristics",
   2: "Text AI",
-  3: "Vision AI",
+  3: "Vision Forensics",
 };
 
-// ── Component ─────────────────────────────────────────────────────────────────
 export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps) {
   const [state, setState] = useState<State>(INITIAL);
   const buttonCooldown    = useRef(false);
@@ -70,13 +66,11 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
   const fileInputRef      = useRef<HTMLInputElement>(null);
   const { addHistory }    = useSessionHistory();
 
-  // Revoke preview URL on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (state.filePreview) URL.revokeObjectURL(state.filePreview);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [state.filePreview]);
 
   const handleFileChange = useCallback((file: File | null) => {
     if (!file) return;
@@ -88,7 +82,6 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
       toast.error("Image must be under 10 MB");
       return;
     }
-    // Revoke old preview
     setState((s) => {
       if (s.filePreview) URL.revokeObjectURL(s.filePreview);
       return {
@@ -99,19 +92,18 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
     });
   }, []);
 
-  // Drag-and-drop handlers
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    dropRef.current?.style && (dropRef.current.style.borderColor = "var(--accent)");
+    if (dropRef.current) dropRef.current.style.borderColor = "#ffffff";
   }, []);
 
   const handleDragLeave = useCallback(() => {
-    dropRef.current?.style && (dropRef.current.style.borderColor = "");
+    if (dropRef.current) dropRef.current.style.borderColor = "";
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    dropRef.current?.style && (dropRef.current.style.borderColor = "");
+    if (dropRef.current) dropRef.current.style.borderColor = "";
     const file = e.dataTransfer.files[0] ?? null;
     handleFileChange(file);
   }, [handleFileChange]);
@@ -119,7 +111,6 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
   const handleScan = useCallback(async () => {
     if (buttonCooldown.current || state.loading) return;
 
-    // Validate input
     if (state.mode === "url" && !state.urlValue.trim()) {
       setState((s) => ({ ...s, error: "Please enter an image URL." }));
       return;
@@ -156,7 +147,6 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
         ? state.urlValue.trim()
         : state.file?.name ?? "uploaded image";
 
-      // Save to history
       const historyItem: ScanHistoryItem = {
         id: hashKey("image", inputPreview),
         type: "image",
@@ -178,11 +168,9 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
         error: null,
       }));
 
-      if (data.cached) toast.success("⚡ Loaded from cache — instant result");
+      if (data.cached) toast.success("⚡ Loaded from cache");
     } catch (err) {
-      const msg = err instanceof Error
-        ? err.message
-        : "Unexpected error. Please try again.";
+      const msg = err instanceof Error ? err.message : "Unexpected error.";
       setState((s) => ({ ...s, loading: false, error: msg }));
       toast.error(msg);
     }
@@ -210,24 +198,20 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
   return (
     <div className="space-y-6">
       {/* ── Mode toggle ──────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center gap-1 p-1 rounded-xl w-fit"
-        style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
-      >
+      <div className="flex items-center gap-1 p-1 rounded-lg w-fit bg-zinc-950 border border-zinc-800">
         {(["url", "file"] as InputMode[]).map((m) => (
           <button
             key={m}
             id={`image-mode-${m}`}
             onClick={() => setState((s) => ({ ...s, mode: m, error: null }))}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-            style={{
-              background: state.mode === m ? "var(--bg4)" : "transparent",
-              color: state.mode === m ? "var(--text)" : "var(--text2)",
-              boxShadow: state.mode === m ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
-            }}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              state.mode === m
+                ? "bg-zinc-850 text-white border border-zinc-700/80 shadow-sm"
+                : "text-zinc-400 hover:text-white"
+            }`}
           >
-            {m === "url" ? <Link2 size={14} /> : <Upload size={14} />}
-            {m === "url" ? "Image URL" : "Upload File"}
+            {m === "url" ? <Link2 size={13} /> : <Upload size={13} />}
+            {m === "url" ? "IMAGE URL" : "UPLOAD FILE"}
           </button>
         ))}
       </div>
@@ -237,37 +221,42 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
         <motion.div
           key={state.mode}
           initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}
+          exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
         >
           {state.mode === "url" ? (
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Input
                 id="image-url-input"
                 type="url"
-                placeholder="https://example.com/image.jpg"
+                placeholder="https://example.com/asset-inspection.jpg"
                 value={state.urlValue}
                 disabled={state.loading}
                 onChange={(e) => setState((s) => ({ ...s, urlValue: e.target.value, error: null }))}
                 onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                className="flex-1"
+                className="flex-1 font-mono text-xs"
               />
-              <Button id="image-scan-url-btn" onClick={handleScan} disabled={!canScan}>
-                {state.loading
-                  ? <><Loader2 size={14} className="animate-spin" />Scanning…</>
-                  : "Scan Image"}
+              <Button
+                id="image-scan-url-btn"
+                onClick={handleScan}
+                disabled={!canScan}
+                className="h-9 px-6 text-xs font-semibold"
+              >
+                {state.loading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Inspecting…
+                  </>
+                ) : (
+                  "Inspect Media"
+                )}
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Drop zone */}
               <div
                 ref={dropRef}
                 id="image-dropzone"
-                className="relative rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200 min-h-[160px]"
-                style={{
-                  border: "2px dashed var(--border2)",
-                  background: "var(--bg3)",
-                }}
+                className="relative rounded-xl border-2 border-dashed border-zinc-800 bg-zinc-950/80 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors p-8 min-h-[160px] hover:border-zinc-600"
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -275,22 +264,25 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
                 aria-label="Click or drag to upload an image"
               >
                 {state.filePreview ? (
-                  // Preview
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={state.filePreview}
                     alt="Preview"
-                    className="max-h-40 max-w-full rounded-lg object-contain"
+                    className="max-h-48 max-w-full rounded-lg object-contain border border-zinc-800"
                   />
                 ) : (
                   <>
-                    <ImageIcon size={32} style={{ color: "var(--text3)" }} />
-                    <span className="text-sm" style={{ color: "var(--text2)" }}>
-                      Click to choose or drag an image here
-                    </span>
-                    <span className="text-xs" style={{ color: "var(--text3)" }}>
-                      JPG, PNG, WebP — max 10 MB
-                    </span>
+                    <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
+                      <ImageIcon size={20} />
+                    </div>
+                    <div className="text-center">
+                      <span className="text-xs font-medium text-white block">
+                        Select file or drag image here
+                      </span>
+                      <span className="text-[11px] font-mono text-zinc-500 mt-1 block">
+                        PNG, JPG, WEBP, GIF &middot; MAX 10 MB
+                      </span>
+                    </div>
                   </>
                 )}
                 <input
@@ -304,20 +296,26 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
               </div>
 
               {state.file && (
-                <p className="text-xs" style={{ color: "var(--text3)" }}>
-                  {state.file.name} — {(state.file.size / 1024).toFixed(0)} KB
-                </p>
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-1">
+                  <span>{state.file.name}</span>
+                  <span>{(state.file.size / 1024).toFixed(0)} KB</span>
+                </div>
               )}
 
               <Button
                 id="image-scan-file-btn"
                 onClick={handleScan}
                 disabled={!canScan}
-                className="w-full sm:w-auto"
+                className="h-10 px-6 text-xs font-semibold w-full sm:w-auto"
               >
-                {state.loading
-                  ? <><Loader2 size={14} className="animate-spin" />Scanning…</>
-                  : "Scan Image"}
+                {state.loading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Inspecting…
+                  </>
+                ) : (
+                  "Inspect Media"
+                )}
               </Button>
             </div>
           )}
@@ -330,10 +328,10 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
           <motion.div
             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-start gap-3 rounded-xl px-4 py-3 text-sm overflow-hidden"
-            style={{ background: "rgba(255,77,109,0.08)", border: "1px solid rgba(255,77,109,0.25)", color: "var(--danger)" }}
+            className="flex items-start gap-3 rounded-lg px-4 py-3 text-xs overflow-hidden bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono"
           >
-            <AlertCircle size={15} className="shrink-0 mt-0.5" />{state.error}
+            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            {state.error}
           </motion.div>
         )}
       </AnimatePresence>
@@ -342,7 +340,11 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
       <AnimatePresence>
         {state.loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <EmptyState icon="🔍" title="Scanning image…" description="Running heuristics, then AI analysis if needed." />
+            <EmptyState
+              icon={<Loader2 size={24} className="animate-spin text-white" />}
+              title="Running Visual Forensics"
+              description="Evaluating file header heuristics, compression anomalies, and local Gemma vision inference."
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -351,121 +353,92 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
       <AnimatePresence>
         {state.result && cfg && !state.loading && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            {/* Header */}
-            <div
-              className="rounded-t-[var(--radius)] px-6 py-4 flex flex-wrap items-center justify-between gap-3"
-              style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderBottom: "none" }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{cfg.icon}</span>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: cfg.color, fontFamily: "Syne, sans-serif" }}>
-                    {cfg.label}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--text3)" }}>
-                    {state.result.reason}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Phase badge */}
-                {state.phase !== null && (
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1"
-                    style={{
-                      background: "rgba(91,156,246,0.12)",
-                      color: "var(--accent)",
-                      border: "1px solid rgba(91,156,246,0.25)",
-                    }}
-                  >
-                    Phase {state.phase}: {PHASE_LABEL[state.phase] ?? "AI"}
-                  </span>
-                )}
-                {/* Cached badge */}
-                {state.cached && (
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium"
-                    style={{
-                      background: "rgba(91,156,246,0.12)",
-                      color: "var(--accent)",
-                      border: "1px solid rgba(91,156,246,0.25)",
-                    }}
-                  >
-                    <Zap size={10} /> Cached
-                  </span>
-                )}
-                {/* Block / Safe badge */}
-                {state.result.shouldBlock ? (
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold"
-                    style={{ background: "rgba(255,77,109,0.15)", color: "var(--danger)", border: "1px solid rgba(255,77,109,0.3)" }}
-                  >
-                    <ShieldAlert size={11} /> Should Block
-                  </span>
-                ) : (
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold"
-                    style={{ background: "rgba(62,207,142,0.12)", color: "var(--safe)", border: "1px solid rgba(62,207,142,0.25)" }}
-                  >
-                    <ShieldCheck size={11} /> Safe to View
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Body */}
-            <div
-              className="rounded-b-[var(--radius)] p-6 space-y-5"
-              style={{ border: `1px solid ${cfg.border}`, background: "var(--bg2)" }}
-            >
-              {/* Confidence bar */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <span style={{ color: "var(--text2)" }}>Confidence</span>
-                  <span className="font-semibold" style={{ color: cfg.color }}>{confidencePct}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--bg4)" }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-700 ease-out"
-                    style={{ width: `${confidencePct}%`, background: cfg.color, boxShadow: `0 0 8px ${cfg.color}88` }}
-                  />
-                </div>
-              </div>
-
-              {/* Indicators */}
-              {state.result.indicators.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text3)" }}>
-                    Detected signals
-                  </p>
-                  <ul className="space-y-1.5">
-                    {state.result.indicators.map((ind, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: cfg.color }} />
-                        <span style={{ color: "var(--text2)" }}>{ind}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {!state.result.shouldBlock && state.result.indicators.length === 0 && (
-                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--safe)" }}>
-                  <CheckCircle2 size={14} />
-                  <span>No suspicious signals detected.</span>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-2 text-xs" style={{ color: "var(--text3)", borderTop: "1px solid var(--border)" }}>
-                <span>Forensic Heuristics + Local Gemma Vision (Indicative)</span>
+            <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950">
+              {/* Header */}
+              <div
+                className="px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-850"
+                style={{ background: cfg.bg }}
+              >
                 <div className="flex items-center gap-3">
-                  <span>100% Private (On-Device)</span>
-                  <Button id="image-clear-btn" variant="ghost" size="sm" onClick={handleClear} className="gap-1.5 h-7 text-xs">
-                    <Trash2 size={11} /> Clear
+                  <span className="text-xl font-mono font-bold" style={{ color: cfg.color }}>{cfg.icon}</span>
+                  <div>
+                    <p className="text-xs font-mono uppercase tracking-wider font-semibold" style={{ color: cfg.color }}>
+                      {cfg.label}
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {state.result.reason}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap font-mono text-[11px]">
+                  {state.phase !== null && (
+                    <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
+                      PHASE {state.phase}: {PHASE_LABEL[state.phase] ?? "AI"}
+                    </span>
+                  )}
+                  {state.cached && (
+                    <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center gap-1">
+                      <Zap size={10} /> CACHED
+                    </span>
+                  )}
+                  {state.result.shouldBlock ? (
+                    <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30 font-semibold flex items-center gap-1">
+                      <ShieldAlert size={11} /> RESTRICTED
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1">
+                      <ShieldCheck size={11} /> SAFE
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-6">
+                <div>
+                  <div className="flex items-center justify-between text-xs font-mono mb-2">
+                    <span className="text-zinc-400">AUTHENTICITY CONFIDENCE</span>
+                    <span className="font-semibold text-white">{confidencePct}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full overflow-hidden bg-zinc-900 border border-zinc-850">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${confidencePct}%`, background: cfg.color }}
+                    />
+                  </div>
+                </div>
+
+                {state.result.indicators && state.result.indicators.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">
+                      Detected Artifacts &amp; Signals
+                    </p>
+                    <ul className="space-y-1.5">
+                      {state.result.indicators.map((ind, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs">
+                          <AlertTriangle size={13} className="shrink-0 mt-0.5 text-amber-400" />
+                          <span className="text-zinc-300">{ind}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Footer disclaimer */}
+                <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-zinc-900 gap-3 text-[11px] font-mono text-zinc-500">
+                  <span>DISCLAIMER: FORENSIC HEURISTICS ARE INDICATIVE &middot; 100% PRIVATE</span>
+                  <Button
+                    id="image-clear-btn"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClear}
+                    className="h-7 text-xs font-mono text-zinc-400 hover:text-white"
+                  >
+                    <Trash2 size={11} /> CLEAR
                   </Button>
                 </div>
               </div>
@@ -477,9 +450,9 @@ export default function ImageAnalyzer({ onRemainingUpdate }: ImageAnalyzerProps)
       {/* ── Empty state ──────────────────────────────────────────────────── */}
       {!state.result && !state.loading && !state.error && (
         <EmptyState
-          icon="🖼️"
-          title="No image scanned yet"
-          description="Enter an image URL or upload a file. Heuristics run instantly — AI only triggers on ambiguous results."
+          icon={<ImageIcon size={20} className="text-zinc-400" />}
+          title="Media Inspector Ready"
+          description="Enter an image URL or upload an image file. URL heuristics evaluate instantly; multimodal inference executes on-device."
         />
       )}
     </div>

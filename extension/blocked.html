@@ -3,86 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🔒 Access Blocked — Ambient Shield</title>
+  <title>Access Blocked — Ambient Shield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #080c14;
-      color: #dce8f8;
-      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex; align-items: center; justify-content: center;
       min-height: 100vh; padding: 24px;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.08) 0%, transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
     }
-    .container { text-align: center; max-width: 480px; width: 100%; }
+    .container {
+      max-width: 480px; width: 100%; text-align: center;
+      background: #09090b; border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px; padding: 36px 28px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
 
-    .shield-anim {
-      font-size: 80px; margin-bottom: 24px;
-      display: inline-block;
-      animation: float 3s ease-in-out infinite;
-      filter: drop-shadow(0 0 24px rgba(255,77,109,0.5));
-    }
-    @keyframes float {
-      0%,100% { transform: translateY(0); }
-      50%      { transform: translateY(-10px); }
+    .shield-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 12px;
+      background: #18181b; border: 1px solid rgba(239, 68, 68, 0.3);
+      font-size: 26px; margin-bottom: 20px;
     }
 
     h1 {
-      font-size: 26px; font-weight: 800;
-      color: #ff4d6d; margin-bottom: 12px;
-      letter-spacing: -0.5px;
+      font-size: 22px; font-weight: 700;
+      color: #ffffff; margin-bottom: 8px;
+      letter-spacing: -0.02em;
     }
 
     .subtitle {
-      font-size: 15px; color: rgba(180,200,230,0.7);
-      line-height: 1.7; margin-bottom: 24px;
+      font-size: 13px; color: #a1a1aa;
+      line-height: 1.6; margin-bottom: 20px;
     }
 
     .blocked-url {
-      background: #0e1520;
-      border: 1px solid rgba(255,77,109,0.35);
-      border-radius: 12px; padding: 12px 20px;
-      font-size: 13px; color: #ff6b84;
+      background: #000000;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 11.5px; color: #fca5a5;
       word-break: break-all;
-      margin-bottom: 28px;
-      font-family: monospace;
+      margin-bottom: 22px;
+      font-family: 'JetBrains Mono', monospace;
     }
 
     .info-box {
-      background: rgba(91,156,246,0.07);
-      border: 1px solid rgba(91,156,246,0.2);
-      border-radius: 12px; padding: 16px 20px;
-      font-size: 13px; color: rgba(180,200,230,0.6);
-      line-height: 1.7;
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px; padding: 14px 16px;
+      font-size: 12px; color: #a1a1aa;
+      line-height: 1.6; font-family: 'JetBrains Mono', monospace;
     }
-    .info-box strong { color: #5b9cf6; }
+    .info-box strong { color: #ffffff; }
 
     .go-back {
       display: inline-block; margin-top: 20px;
-      padding: 10px 24px; border-radius: 10px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: rgba(180,200,230,0.7); font-size: 13px;
+      padding: 9px 20px; border-radius: 6px;
+      background: #ffffff; color: #000000; font-weight: 600;
+      font-size: 12px; font-family: 'JetBrains Mono', monospace;
       cursor: pointer; text-decoration: none;
       transition: background 0.15s;
     }
-    .go-back:hover { background: rgba(255,255,255,0.1); }
+    .go-back:hover { background: #e4e4e7; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="shield-anim">🛡️</div>
-    <h1>Access Blocked</h1>
+    <div class="shield-badge">🔒</div>
+    <h1>Access Restricted</h1>
     <p class="subtitle">
-      This URL is not allowed in <strong style="color:#ff4d6d">Parental Mode</strong>.<br/>
-      Only whitelisted websites are accessible right now.
+      This destination is blocked under active <strong style="color:#ef4444">Parental Mode</strong>.<br/>
+      Only approved whitelisted sites are currently accessible.
     </p>
     <div class="blocked-url" id="blocked-url">Loading…</div>
     <div class="info-box">
-      To access this site, open the <strong>Ambient Shield</strong> extension,<br/>
-      click the <strong>Parental Mode</strong> toggle, and enter<br/>
-      the password to disable the mode.
+      To permit access, open the <strong>Ambient Shield</strong> toolbar popup, select <strong>Parental Mode</strong>, and enter your PIN.
     </div>
-    <a class="go-back" onclick="history.back()">← Go Back</a>
+    <a class="go-back" onclick="history.back()">← RETURN TO PREVIOUS PAGE</a>
   </div>
   <script>
     const params = new URLSearchParams(location.search);

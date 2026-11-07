@@ -23,22 +23,17 @@ function mapLevel(level: RiskLevel): "safe" | "caution" | "danger" {
 function Section({
   icon,
   title,
-  color = "var(--text2)",
   children,
 }: {
   icon: React.ReactNode;
   title: string;
-  color?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <span style={{ color }}>{icon}</span>
-        <span
-          className="text-xs font-semibold uppercase tracking-widest"
-          style={{ color }}
-        >
+        <span className="text-zinc-400">{icon}</span>
+        <span className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-300">
           {title}
         </span>
       </div>
@@ -47,24 +42,23 @@ function Section({
   );
 }
 
-function TagList({ items, color }: { items: string[]; color: string }) {
-  if (!items.length)
+function TagList({ items, variant = "default" }: { items: string[]; variant?: "default" | "danger" }) {
+  if (!items || !items.length)
     return (
-      <p className="text-xs italic" style={{ color: "var(--text3)" }}>
+      <p className="text-xs font-mono italic text-zinc-600">
         None noted
       </p>
     );
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {items.map((item, i) => (
         <span
           key={i}
-          className="text-xs px-2.5 py-1 rounded-full"
-          style={{
-            background: `${color}18`,
-            color,
-            border: `1px solid ${color}40`,
-          }}
+          className={`text-xs px-2.5 py-0.5 rounded-md font-mono ${
+            variant === "danger"
+              ? "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+              : "bg-zinc-900 text-zinc-300 border border-zinc-800"
+          }`}
         >
           {item}
         </span>
@@ -74,22 +68,21 @@ function TagList({ items, color }: { items: string[]; color: string }) {
 }
 
 function RedFlagsList({ flags }: { flags: string[] }) {
-  if (!flags.length)
+  if (!flags || !flags.length)
     return (
-      <p className="text-xs italic" style={{ color: "var(--text3)" }}>
-        No red flags detected
+      <p className="text-xs font-mono italic text-zinc-600">
+        No critical red flags detected
       </p>
     );
   return (
     <ul className="space-y-2">
       {flags.map((flag, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm">
+        <li key={i} className="flex items-start gap-2 text-xs">
           <AlertTriangle
             size={13}
-            className="shrink-0 mt-0.5"
-            style={{ color: "var(--danger)" }}
+            className="shrink-0 mt-0.5 text-rose-400"
           />
-          <span style={{ color: "var(--text2)" }}>{flag}</span>
+          <span className="text-zinc-300 leading-relaxed">{flag}</span>
         </li>
       ))}
     </ul>
@@ -97,22 +90,21 @@ function RedFlagsList({ flags }: { flags: string[] }) {
 }
 
 function TipsList({ tips }: { tips: string[] }) {
-  if (!tips.length)
+  if (!tips || !tips.length)
     return (
-      <p className="text-xs italic" style={{ color: "var(--text3)" }}>
-        No specific tips
+      <p className="text-xs font-mono italic text-zinc-600">
+        No specific opt-out steps required
       </p>
     );
   return (
     <ul className="space-y-2">
       {tips.map((tip, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm">
+        <li key={i} className="flex items-start gap-2 text-xs">
           <CheckCircle2
             size={13}
-            className="shrink-0 mt-0.5"
-            style={{ color: "var(--safe)" }}
+            className="shrink-0 mt-0.5 text-emerald-400"
           />
-          <span style={{ color: "var(--text2)" }}>{tip}</span>
+          <span className="text-zinc-300 leading-relaxed">{tip}</span>
         </li>
       ))}
     </ul>
@@ -122,7 +114,7 @@ function TipsList({ tips }: { tips: string[] }) {
 // ── Props ────────────────────────────────────────────────────────────────────
 interface ResultCardProps {
   type: "policy" | "factcheck" | "image";
-  result: PolicyResult; // extend union when other modules ship
+  result: PolicyResult;
   cached: boolean;
   remainingCalls: number;
 }
@@ -132,46 +124,27 @@ export default function ResultCard({
   type,
   result,
   cached,
-  remainingCalls,
 }: ResultCardProps) {
-  if (type !== "policy") return null; // other modules will fill this out
+  if (type !== "policy") return null;
 
   const levelKey = mapLevel(result.riskLevel);
+  const summaryText = result.simpleSummary || result.summary || result.verdict;
 
   return (
-    <div
-      className="rounded-[var(--radius)] overflow-hidden"
-      style={{ border: "1px solid var(--border2)", background: "var(--bg2)" }}
-    >
+    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950">
       {/* ── Header strip ─────────────────────────────────────────────────── */}
-      <div
-        className="px-6 py-4 flex flex-wrap items-center justify-between gap-3"
-        style={{
-          background: "var(--bg3)",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <Shield size={18} style={{ color: "var(--accent)" }} />
-          <span
-            className="text-sm font-bold"
-            style={{ fontFamily: "Syne, sans-serif", color: "var(--text)" }}
-          >
-            Analysis Result
+      <div className="px-6 py-4 flex flex-wrap items-center justify-between gap-3 bg-zinc-900/60 border-b border-zinc-850">
+        <div className="flex items-center gap-2.5">
+          <Shield size={16} className="text-white" />
+          <span className="text-xs font-mono uppercase tracking-wider font-semibold text-white">
+            POLICY AUDIT RESULT
           </span>
         </div>
         <div className="flex items-center gap-2">
           {cached && (
-            <span
-              className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium"
-              style={{
-                background: "rgba(91,156,246,0.12)",
-                color: "var(--accent)",
-                border: "1px solid rgba(91,156,246,0.25)",
-              }}
-            >
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center gap-1">
               <Zap size={10} />
-              Loaded from cache
+              CACHED
             </span>
           )}
           <RiskBadge level={levelKey} />
@@ -183,93 +156,63 @@ export default function ResultCard({
         <RiskMeter score={result.riskScore} />
 
         {/* ── Simple summary box ─────────────────────────────────────────── */}
-        <div
-          className="rounded-xl px-5 py-4"
-          style={{
-            background: "rgba(91,156,246,0.07)",
-            border: "1px solid rgba(91,156,246,0.2)",
-          }}
-        >
+        <div className="rounded-lg p-4 bg-zinc-900/50 border border-zinc-800">
           <div className="flex items-center gap-2 mb-1.5">
-            <Info size={13} style={{ color: "var(--accent)" }} />
-            <span
-              className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "var(--accent)" }}
-            >
-              Plain-English Summary
+            <Info size={13} className="text-white" />
+            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-300">
+              Plain-English Breakdown
             </span>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-            {result.simpleSummary}
+          <p className="text-xs text-zinc-300 leading-relaxed">
+            {summaryText}
           </p>
         </div>
 
-        {/* ── Verdict ────────────────────────────────────────────────────── */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--text3)" }}>
-            Verdict
-          </p>
-          <p className="text-sm" style={{ color: "var(--text2)" }}>
-            {result.verdict}
-          </p>
-        </div>
-
-        <hr style={{ borderColor: "var(--border)" }} />
-
-        {/* ── Three-column tags ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {/* ── Data collected & shared grid ───────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 border-t border-zinc-900">
           <Section
-            icon={<Info size={14} />}
-            title="What they collect"
-            color="var(--caution)"
+            icon={<Shield size={14} />}
+            title="Data Collected"
           >
-            <TagList items={result.whatTheyCollect} color="var(--caution)" />
+            <TagList items={result.whatTheyCollect || []} />
           </Section>
 
           <Section
             icon={<Users size={14} />}
-            title="Who they share with"
-            color="var(--danger)"
+            title="Shared With Third Parties"
           >
-            <TagList items={result.whoTheyShare} color="var(--danger)" />
-          </Section>
-
-          <Section
-            icon={<CheckCircle2 size={14} />}
-            title="Your rights"
-            color="var(--safe)"
-          >
-            <TagList items={result.yourRights} color="var(--safe)" />
+            <TagList items={result.whoTheyShare || []} />
           </Section>
         </div>
 
-        <hr style={{ borderColor: "var(--border)" }} />
+        {/* ── User rights ─────────────────────────────────────────────────── */}
+        <div className="pt-2 border-t border-zinc-900">
+          <Section
+            icon={<CheckCircle2 size={14} />}
+            title="User Rights Recognized"
+          >
+            <TagList items={result.yourRights || []} />
+          </Section>
+        </div>
 
-        {/* ── Red flags ──────────────────────────────────────────────────── */}
-        <Section
-          icon={<AlertTriangle size={14} />}
-          title="Red Flags"
-          color="var(--danger)"
-        >
-          <RedFlagsList flags={result.redFlags} />
-        </Section>
+        {/* ── Red flags ───────────────────────────────────────────────────── */}
+        <div className="pt-2 border-t border-zinc-900">
+          <Section
+            icon={<AlertTriangle size={14} className="text-rose-400" />}
+            title="Flagged Concerns"
+          >
+            <RedFlagsList flags={result.redFlags || []} />
+          </Section>
+        </div>
 
-        {/* ── Opt-out tips ─────────────────────────────────────────────────── */}
-        <Section
-          icon={<Lightbulb size={14} />}
-          title="Opt-out Tips"
-          color="var(--safe)"
-        >
-          <TipsList tips={result.optOutTips} />
-        </Section>
-
-        {/* ── Footer meta ────────────────────────────────────────────────── */}
-        <div
-          className="flex items-center justify-between pt-2 text-xs"
-          style={{ color: "var(--text3)", borderTop: "1px solid var(--border)" }}
-        >
-          <span>Powered by Local Gemma LLM</span>
-          <span>100% Private (On-Device)</span>
+        {/* ── Tips / opt-out ──────────────────────────────────────────────── */}
+        <div className="pt-2 border-t border-zinc-900">
+          <Section
+            icon={<Lightbulb size={14} className="text-emerald-400" />}
+            title="Opt-Out & Protection Steps"
+          >
+            <TipsList tips={result.optOutTips || []} />
+          </Section>
         </div>
       </div>
     </div>

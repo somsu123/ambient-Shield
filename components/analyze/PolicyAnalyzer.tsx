@@ -22,7 +22,6 @@ interface PolicyAnalyzerProps {
   restoreRef?: MutableRefObject<((item: ScanHistoryItem) => void) | null>;
 }
 
-// ── Component state ───────────────────────────────────────────────────────────
 type InputMode = "text" | "url";
 
 interface State {
@@ -49,18 +48,14 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
   const buttonCooldown = useRef(false);
   const { addHistory } = useSessionHistory();
 
-  // Cleanup debounce on unmount
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  // Register restore callback so AnalyzeTabs can call it when user clicks history item
-  // OR when context menu / popup sends a URL intent (id === '__intent__')
   useEffect(() => {
     if (!restoreRef) return;
     restoreRef.current = (item: ScanHistoryItem) => {
       if (item.type !== "policy") return;
 
       if (item.id === "__intent__") {
-        // Context menu / popup intent — pre-fill input only, don't show result card
         const isUrl = item.input.startsWith("http://") || item.input.startsWith("https://");
         setState((s) => ({
           ...s,
@@ -72,7 +67,6 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
         return;
       }
 
-      // Full history restore — show result card
       setState((s) => ({
         ...s,
         result: item.result as PolicyResult,
@@ -113,7 +107,6 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
         return;
       }
 
-      // Save to session history
       const historyItem: ScanHistoryItem = {
         id: hashKey("policy", input),
         type: "policy",
@@ -132,7 +125,7 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
         cached: data.cached ?? false, remainingCalls: remaining, error: null,
       }));
 
-      if (data.cached) toast.success("⚡ Loaded from cache — instant result");
+      if (data.cached) toast.success("⚡ Loaded from cache");
     } catch {
       const msg = "Network error — please check your connection and try again.";
       setState((s) => ({ ...s, loading: false, error: msg }));
@@ -148,7 +141,7 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
       await navigator.clipboard.writeText(JSON.stringify(state.result, null, 2));
       setState((s) => ({ ...s, copied: true }));
       setTimeout(() => setState((s) => ({ ...s, copied: false })), 2_000);
-      toast.success("Copied to clipboard");
+      toast.success("JSON copied");
     } catch { toast.error("Clipboard unavailable"); }
   }, [state.result]);
 
@@ -160,51 +153,93 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
   return (
     <div className="space-y-6">
       {/* ── Input mode toggle ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1 p-1 rounded-xl w-fit"
-        style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center gap-1 p-1 rounded-lg w-fit bg-zinc-950 border border-zinc-800">
         {(["text", "url"] as InputMode[]).map((m) => (
-          <button key={m} id={`policy-mode-${m}`} onClick={() => setMode(m)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-            style={{ background: state.mode === m ? "var(--bg4)" : "transparent", color: state.mode === m ? "var(--text)" : "var(--text2)", boxShadow: state.mode === m ? "0 1px 4px rgba(0,0,0,0.3)" : "none" }}>
-            {m === "text" ? <FileText size={14} /> : <Link2 size={14} />}
-            {m === "text" ? "Paste Text" : "Enter URL"}
+          <button
+            key={m}
+            id={`policy-mode-${m}`}
+            onClick={() => setMode(m)}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              state.mode === m
+                ? "bg-zinc-850 text-white border border-zinc-700/80 shadow-sm"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            {m === "text" ? <FileText size={13} /> : <Link2 size={13} />}
+            {m === "text" ? "PASTE TEXT" : "ENTER URL"}
           </button>
         ))}
       </div>
 
       {/* ── Input area ────────────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
-        <motion.div key={state.mode}
-          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+        <motion.div
+          key={state.mode}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.15 }}
+        >
           {state.mode === "url" ? (
-            <div className="flex gap-3">
-              <Input id="policy-url-input" type="url" placeholder="https://example.com/privacy"
-                value={state.urlValue} disabled={state.loading}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input
+                id="policy-url-input"
+                type="url"
+                placeholder="https://example.com/privacy-policy"
+                value={state.urlValue}
+                disabled={state.loading}
                 onChange={(e) => setState((s) => ({ ...s, urlValue: e.target.value, error: null }))}
                 onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-                className="flex-1" />
-              <Button id="policy-analyze-url-btn" onClick={handleAnalyze} disabled={!canSubmit}>
-                {state.loading ? <><Loader2 size={14} className="animate-spin" />Analyzing…</> : "Analyze Policy"}
+                className="flex-1 font-mono text-xs"
+              />
+              <Button
+                id="policy-analyze-url-btn"
+                onClick={handleAnalyze}
+                disabled={!canSubmit}
+                className="h-9 px-6 text-xs font-semibold"
+              >
+                {state.loading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Fetching &amp; Analyzing…
+                  </>
+                ) : (
+                  "Analyze Policy"
+                )}
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="relative">
-                <Textarea id="policy-text-input" className="min-h-[160px] pr-4"
-                  placeholder={"Paste a privacy policy here…\n\ne.g. 'We collect your name, email, location, and device identifiers. We share this data with our advertising partners…'"}
-                  value={state.textValue} disabled={state.loading}
-                  onChange={(e) => setState((s) => ({ ...s, textValue: e.target.value, error: null }))} />
-                <span className="absolute bottom-3 right-3 text-[10px] font-mono"
-                  style={{ color: isOverLimit ? "var(--danger)" : "var(--text3)" }}>
+                <Textarea
+                  id="policy-text-input"
+                  className="min-h-[160px] pr-4 font-mono text-xs bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:border-white focus-visible:ring-1 focus-visible:ring-white rounded-lg"
+                  placeholder={"Paste privacy policy or terms of service text here…\n\ne.g. 'We collect your device IP, telemetry, browsing habits, and share with third-party advertising exchanges…'"}
+                  value={state.textValue}
+                  disabled={state.loading}
+                  onChange={(e) => setState((s) => ({ ...s, textValue: e.target.value, error: null }))}
+                />
+                <span
+                  className="absolute bottom-3 right-3 text-[10px] font-mono"
+                  style={{ color: isOverLimit ? "var(--danger)" : "var(--text3)" }}
+                >
                   {charCount}/7000
                 </span>
               </div>
-              <Button id="policy-analyze-text-btn" onClick={handleAnalyze}
-                disabled={!canSubmit || isOverLimit} className="w-full sm:w-auto">
-                {state.loading
-                  ? <><Loader2 size={14} className="animate-spin" />Analyzing… (or checking cache)</>
-                  : "Analyze Policy"}
+              <Button
+                id="policy-analyze-text-btn"
+                onClick={handleAnalyze}
+                disabled={!canSubmit || isOverLimit}
+                className="h-10 px-6 text-xs font-semibold w-full sm:w-auto"
+              >
+                {state.loading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Analyzing Offline Regex…
+                  </>
+                ) : (
+                  "Analyze Policy"
+                )}
               </Button>
             </div>
           )}
@@ -214,11 +249,14 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
       {/* ── Error banner ──────────────────────────────────────────────────── */}
       <AnimatePresence>
         {state.error && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-start gap-3 rounded-xl px-4 py-3 text-sm overflow-hidden"
-            style={{ background: "rgba(255,77,109,0.08)", border: "1px solid rgba(255,77,109,0.25)", color: "var(--danger)" }}>
-            <AlertCircle size={15} className="shrink-0 mt-0.5" />{state.error}
+            className="flex items-start gap-3 rounded-lg px-4 py-3 text-xs overflow-hidden bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono"
+          >
+            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            {state.error}
           </motion.div>
         )}
       </AnimatePresence>
@@ -227,7 +265,11 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
       <AnimatePresence>
         {state.loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <EmptyState icon="🔍" title="Analyzing policy…" description="Scanning with offline heuristics engine and local Gemma LLM." />
+            <EmptyState
+              icon={<Loader2 size={24} className="animate-spin text-white" />}
+              title="Parsing Policy Content"
+              description="Extracting tracking clauses, data retention policies, and scoring liabilities offline."
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -235,28 +277,63 @@ export default function PolicyAnalyzer({ onRemainingUpdate, restoreRef }: Policy
       {/* ── Result ────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {state.result && !state.loading && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: "easeOut" }}>
-            <div className="flex items-center justify-between mb-4">
-              <span className="label-sm">Analysis Complete</span>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="label-sm font-mono text-zinc-400">ANALYSIS COMPLETE</span>
               <div className="flex items-center gap-2">
-                <Button id="policy-copy-btn" variant="outline" size="sm" onClick={handleCopy} className="gap-1.5">
-                  {state.copied ? <><Check size={13} style={{ color: "var(--safe)" }} />Copied</> : <><Copy size={13} />Copy JSON</>}
+                <Button
+                  id="policy-copy-btn"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopy}
+                  className="h-7 text-xs font-mono"
+                >
+                  {state.copied ? (
+                    <>
+                      <Check size={11} className="text-emerald-400" />
+                      COPIED
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={11} />
+                      COPY JSON
+                    </>
+                  )}
                 </Button>
-                <Button id="policy-clear-btn" variant="ghost" size="sm" onClick={handleClear} className="gap-1.5">
-                  <Trash2 size={13} />Clear
+                <Button
+                  id="policy-clear-btn"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClear}
+                  className="h-7 text-xs font-mono text-zinc-500 hover:text-white"
+                >
+                  <Trash2 size={11} />
+                  CLEAR
                 </Button>
               </div>
             </div>
-            <ResultCard type="policy" result={state.result} cached={state.cached} remainingCalls={state.remainingCalls} />
+            <ResultCard
+              type="policy"
+              result={state.result}
+              cached={state.cached}
+              remainingCalls={state.remainingCalls}
+            />
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ── Initial empty state ───────────────────────────────────────────── */}
       {!state.result && !state.loading && !state.error && (
-        <EmptyState icon="📄" title="No analysis yet"
-          description="Paste a privacy policy or enter a URL above. Cached results return instantly and are free." />
+        <EmptyState
+          icon={<FileText size={20} className="text-zinc-400" />}
+          title="No Policy Evaluated"
+          description="Paste a privacy policy or enter a URL above. Cached results return instantaneously with zero telemetry."
+        />
       )}
     </div>
   );

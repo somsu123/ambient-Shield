@@ -3,121 +3,150 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ambient Shield — Dashboard</title>
+  <title>Ambient Shield — Verification Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #070b12;
-      --bg2:     #0c1220;
-      --bg3:     #111827;
-      --bg4:     #1a2440;
-      --border:  rgba(255,255,255,0.06);
-      --border2: rgba(255,255,255,0.11);
-      --text:    #e2eeff;
-      --text2:   rgba(180,210,255,0.6);
-      --text3:   rgba(180,210,255,0.35);
-      --accent:  #5b9cf6;
-      --accent2: #7ab3ff;
-      --safe:    #3ecf8e;
-      --caution: #f5a623;
-      --danger:  #ff4d6d;
-      --radius:  12px;
+      --bg:      #000000;
+      --bg2:     #09090b;
+      --bg3:     #121215;
+      --bg4:     #1c1c21;
+      --border:  rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.16);
+      --border3: rgba(255,255,255,0.28);
+      --text:    #ffffff;
+      --text2:   #a1a1aa;
+      --text3:   #71717a;
+      --accent:  #ffffff;
+      --safe:    #22c55e;
+      --caution: #eab308;
+      --danger:  #ef4444;
+      --radius:  10px;
     }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; background-color: #000000; color: #ffffff; }
     body {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
     }
 
-    /* ── Glow blobs ── */
-    .glow { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
-    .glow-1 { width: 700px; height: 700px; background: rgba(91,156,246,0.07); top: -200px; left: 50%; transform: translateX(-50%); }
-    .glow-2 { width: 400px; height: 400px; background: rgba(62,207,142,0.05); bottom: 0; right: -100px; }
+    code, kbd, samp, pre {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-variant-numeric: tabular-nums;
+    }
 
     /* ── Navbar ── */
     nav {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(7,11,18,0.85);
+      background: rgba(0,0,0,0.85);
       border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(20px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
     .nav-inner {
-      max-width: 1100px; margin: 0 auto; padding: 0 24px;
-      height: 60px; display: flex; align-items: center; justify-content: space-between;
+      max-width: 1040px; margin: 0 auto; padding: 0 24px;
+      height: 56px; display: flex; align-items: center; justify-content: space-between;
     }
     .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .logo-icon {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: linear-gradient(135deg, rgba(91,156,246,0.2), rgba(58,123,213,0.1));
-      border: 1px solid rgba(91,156,246,0.3);
-      display: flex; align-items: center; justify-content: center; font-size: 16px;
-      box-shadow: 0 0 16px rgba(91,156,246,0.2);
+      width: 28px; height: 28px; border-radius: 6px;
+      background: #18181b;
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
     }
-    .logo-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: var(--text); }
-    .nav-status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--safe); font-weight: 500; }
-    .nav-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--safe); box-shadow: 0 0 8px rgba(62,207,142,0.8); animation: pulse 2.5s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px rgba(62,207,142,0.8)} 50%{opacity:0.5;box-shadow:0 0 3px rgba(62,207,142,0.3)} }
+    .logo-name {
+      font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.2px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .logo-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px; font-weight: 600; padding: 1px 6px; border-radius: 4px;
+      background: #18181b; border: 1px solid var(--border); color: var(--text2);
+    }
+    .nav-status {
+      display: flex; align-items: center; gap: 7px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--safe); font-weight: 500; letter-spacing: 0.04em;
+      border: 1px solid rgba(34,197,94,0.25); background: rgba(34,197,94,0.08);
+      padding: 3px 9px; border-radius: 6px;
+    }
+    .nav-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--safe);
+      box-shadow: 0 0 6px rgba(34,197,94,0.8); animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.4; transform:scale(0.9)} }
 
     /* ── Hero ── */
-    .hero { text-align: center; padding: 64px 24px 48px; position: relative; z-index: 1; }
+    .hero { text-align: center; padding: 48px 24px 36px; position: relative; z-index: 1; }
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px;
-      padding: 5px 14px; border-radius: 100px;
-      border: 1px solid rgba(91,156,246,0.25); background: rgba(91,156,246,0.08);
-      color: var(--accent); font-size: 12px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 6px; margin-bottom: 16px;
+      padding: 4px 12px; border-radius: 6px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+      color: var(--text2); font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500;
     }
     .hero h1 {
-      font-family: 'Syne', sans-serif; font-size: clamp(36px, 5vw, 60px);
-      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 16px;
+      font-size: clamp(32px, 4.5vw, 52px);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 12px;
     }
-    .hero h1 span { background: linear-gradient(135deg, var(--accent), #a5c8ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .hero p { color: var(--text2); font-size: 17px; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+    .hero h1 span { color: var(--text2); }
+    .hero p { color: var(--text2); font-size: 14.5px; max-width: 580px; margin: 0 auto; line-height: 1.6; }
 
     /* ── Tool tabs ── */
-    .tabs-wrapper { max-width: 900px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .tabs-wrapper { max-width: 960px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
     .tabs {
-      display: flex; gap: 4px; padding: 5px;
-      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
-      margin-bottom: 28px;
+      display: flex; gap: 4px; padding: 4px;
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 24px;
     }
     .tab-btn {
-      flex: 1; padding: 10px 16px; border: none; border-radius: 10px;
-      background: transparent; color: var(--text2); font-size: 13px; font-weight: 500;
-      cursor: pointer; transition: all 0.2s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 7px;
+      flex: 1; padding: 9px 14px; border: 1px solid transparent; border-radius: 7px;
+      background: transparent; color: var(--text2); font-size: 12.5px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 7px;
     }
-    .tab-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-    .tab-btn.active { background: var(--bg4); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
-    .tab-icon { font-size: 15px; }
+    .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .tab-btn.active {
+      background: #18181b; color: #ffffff; border-color: var(--border2);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .tab-icon { font-size: 14px; }
 
     /* ── Tool panels ── */
     .panel { display: none; }
     .panel.active { display: block; }
 
     .tool-card {
-      background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
       padding: 28px; display: flex; flex-direction: column; gap: 18px;
+      box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.06);
     }
     .tool-header { display: flex; flex-direction: column; gap: 6px; }
-    .tool-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-    .tool-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); }
-    .tool-desc { font-size: 14px; color: var(--text2); line-height: 1.6; }
+    .tool-label { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+    .tool-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .tool-desc { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
 
     textarea, input[type="text"], input[type="url"] {
-      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
-      border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px;
+      width: 100%; background: #000000; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px;
       padding: 12px 14px; outline: none; resize: vertical;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    textarea:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,156,246,0.12); }
-    textarea { min-height: 160px; line-height: 1.6; }
+    textarea:focus, input:focus {
+      border-color: #ffffff; box-shadow: 0 0 0 1px #ffffff;
+    }
+    textarea { min-height: 150px; line-height: 1.6; }
     input::placeholder, textarea::placeholder { color: var(--text3); }
 
     .input-row { display: flex; gap: 10px; align-items: flex-start; }
@@ -125,183 +154,191 @@
 
     /* File upload */
     .file-drop {
-      border: 2px dashed var(--border2); border-radius: 12px;
-      padding: 36px 20px; text-align: center; cursor: pointer;
-      transition: all 0.2s; background: var(--bg3);
+      border: 1px dashed var(--border2); border-radius: 10px;
+      padding: 32px 20px; text-align: center; cursor: pointer;
+      transition: all 0.15s; background: #000000;
     }
-    .file-drop:hover, .file-drop.drag { border-color: var(--accent); background: rgba(91,156,246,0.06); }
-    .file-drop-icon { font-size: 32px; margin-bottom: 10px; }
-    .file-drop-text { font-size: 14px; color: var(--text2); margin-bottom: 4px; }
-    .file-drop-hint { font-size: 12px; color: var(--text3); }
+    .file-drop:hover, .file-drop.drag { border-color: #ffffff; background: rgba(255,255,255,0.02); }
+    .file-drop-icon { font-size: 28px; margin-bottom: 8px; }
+    .file-drop-text { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .file-drop-hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
     .file-drop input[type="file"] { display: none; }
 
     /* Buttons */
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      padding: 12px 24px; border-radius: 10px; border: none;
-      font-size: 14px; font-weight: 600; cursor: pointer;
-      transition: all 0.18s; font-family: inherit; letter-spacing: -0.1px;
+      padding: 10px 20px; border-radius: 8px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; font-family: inherit; letter-spacing: -0.1px;
     }
-    .btn:active { transform: scale(0.97); }
+    .btn:active { transform: scale(0.98); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+    /* 21st.dev Solid White CTA with Black Text */
     .btn-primary {
-      background: linear-gradient(135deg, #1e4bb8, #5b9cf6);
-      color: #fff; box-shadow: 0 2px 18px rgba(91,156,246,0.3); width: 100%;
+      background: #ffffff;
+      color: #000000;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);
     }
-    .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #2454cc, #6fabf8); box-shadow: 0 4px 24px rgba(91,156,246,0.45); }
-    .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
-    .btn-secondary:hover:not(:disabled) { background: var(--bg4); }
+    .btn-primary:hover:not(:disabled) {
+      background: #e4e4e7;
+    }
+    .btn-secondary {
+      background: #18181b; color: var(--text); border: 1px solid var(--border2);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #27272a; border-color: rgba(255,255,255,0.3);
+    }
 
     /* Results */
     .result-area { display: none; flex-direction: column; gap: 16px; }
     .result-area.show { display: flex; }
 
     .result-card {
-      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      background: #000000; border: 1px solid var(--border); border-radius: 10px;
       padding: 20px; display: flex; flex-direction: column; gap: 14px;
     }
 
     .risk-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
     .risk-badge {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
     }
-    .risk-badge.safe   { background: rgba(62,207,142,0.15); color: var(--safe);    border: 1px solid rgba(62,207,142,0.3); }
-    .risk-badge.caution{ background: rgba(245,166,35,0.15);  color: var(--caution); border: 1px solid rgba(245,166,35,0.3); }
-    .risk-badge.danger { background: rgba(255,77,109,0.15);  color: var(--danger);  border: 1px solid rgba(255,77,109,0.3); }
-    .risk-badge.loading{ background: rgba(91,156,246,0.12); color: var(--accent);  border: 1px solid rgba(91,156,246,0.25); }
+    .risk-badge.safe   { background: rgba(34,197,94,0.1); color: var(--safe);    border: 1px solid rgba(34,197,94,0.3); }
+    .risk-badge.caution{ background: rgba(234,179,8,0.1);  color: var(--caution); border: 1px solid rgba(234,179,8,0.3); }
+    .risk-badge.danger { background: rgba(239,68,68,0.1);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+    .risk-badge.loading{ background: rgba(255,255,255,0.08); color: #ffffff;      border: 1px solid var(--border2); }
 
-    .risk-score { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
+    .risk-score { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700; }
     .risk-score.safe    { color: var(--safe); }
     .risk-score.caution { color: var(--caution); }
     .risk-score.danger  { color: var(--danger); }
 
-    .risk-bar-wrap { height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
-    .risk-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .risk-bar-wrap { height: 5px; background: #18181b; border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
+    .risk-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
     .risk-bar.safe    { background: var(--safe); }
     .risk-bar.caution { background: var(--caution); }
     .risk-bar.danger  { background: var(--danger); }
 
-    .result-summary { font-size: 14px; color: var(--text2); line-height: 1.7; }
+    .result-summary { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
 
     .flags { display: flex; flex-direction: column; gap: 8px; }
-    .flag { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--text2); line-height: 1.5; }
-    .flag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .flag { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+    .flag-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
 
-    .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 700; }
+    .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 700; }
 
     /* Loading spinner */
     .spinner {
-      width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.2);
-      border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite;
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #ffffff; border-radius: 50%; animation: spin 0.6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Error */
     .error-card {
-      background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3);
-      border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #ff8099;
-      display: flex; gap: 10px; align-items: flex-start;
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 8px; padding: 12px 14px; font-size: 12.5px; color: #fca5a5;
+      display: flex; gap: 10px; align-items: flex-start; font-family: 'JetBrains Mono', monospace;
     }
 
     /* Image preview */
-    .img-preview { display: none; border-radius: 10px; overflow: hidden; max-height: 240px; }
-    .img-preview img { width: 100%; height: 100%; object-fit: contain; max-height: 240px; background: var(--bg3); }
+    .img-preview { display: none; border-radius: 8px; overflow: hidden; max-height: 240px; border: 1px solid var(--border); }
+    .img-preview img { width: 100%; height: 100%; object-fit: contain; max-height: 240px; background: #000000; }
     .img-preview.show { display: block; }
 
-    /* Separators */
     .divider { height: 1px; background: var(--border); }
 
     /* Legend */
-    .legend { display: flex; gap: 20px; flex-wrap: wrap; }
-    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .legend { display: flex; gap: 18px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+    .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
 
     .verdict-box {
-      background: var(--bg4); border-radius: 8px; padding: 12px 14px;
+      background: #121215; border-radius: 8px; padding: 12px 14px;
       font-size: 13px; color: var(--text2); border: 1px solid var(--border);
       line-height: 1.6;
     }
     .verdict-box strong { color: var(--text); }
 
-    /* Footer */
-    footer {
-      text-align: center; padding: 28px 24px;
-      border-top: 1px solid var(--border); margin-top: 60px;
-      font-size: 12px; color: var(--text3);
-      position: relative; z-index: 1;
-    }
-
-    @media (max-width: 600px) {
-      .tab-btn span { display: none; }
-      .hero { padding: 40px 16px 32px; }
-      .tool-card { padding: 20px; }
-    }
-
     /* ── Fact Checker & Job Verifier Enhancements ── */
     .type-pill {
       display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 10px; border-radius: 100px;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+      padding: 3px 8px; border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em;
     }
-    .type-pill.job { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
-    .type-pill.claim { background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+    .type-pill.job { background: rgba(255,255,255,0.08); color: #ffffff; border: 1px solid var(--border2); }
+    .type-pill.claim { background: rgba(255,255,255,0.08); color: #ffffff; border: 1px solid var(--border2); }
 
     .step-badge {
-      font-size: 11px; padding: 3px 10px; border-radius: 6px;
-      background: var(--bg2); color: var(--text3); border: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 4px;
+      background: var(--bg3); color: var(--text3); border: 1px solid var(--border);
       transition: all 0.2s ease;
     }
-    .step-badge.active { background: rgba(91,156,246,0.2); color: var(--accent); border-color: var(--accent); font-weight: 600; }
-    .step-badge.done { background: rgba(62,207,142,0.15); color: var(--safe); border-color: rgba(62,207,142,0.3); }
+    .step-badge.active { background: #ffffff; color: #000000; border-color: #ffffff; font-weight: 600; }
+    .step-badge.done { background: rgba(34,197,94,0.12); color: var(--safe); border-color: rgba(34,197,94,0.3); }
 
     .checklist-table { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
     .checklist-row {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-      padding: 10px 14px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border);
+      padding: 10px 12px; border-radius: 8px; background: #000000; border: 1px solid var(--border);
     }
     .check-status-badge {
-      display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
-      padding: 2px 8px; border-radius: 12px; white-space: nowrap; flex-shrink: 0;
+      display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
     }
-    .check-status-badge.pass { background: rgba(62,207,142,0.15); color: var(--safe); border: 1px solid rgba(62,207,142,0.3); }
-    .check-status-badge.fail { background: rgba(255,77,109,0.15); color: var(--danger); border: 1px solid rgba(255,77,109,0.3); }
-    .check-status-badge.unknown { background: rgba(180,210,255,0.1); color: var(--text3); border: 1px solid var(--border); }
+    .check-status-badge.pass { background: rgba(34,197,94,0.12); color: var(--safe); border: 1px solid rgba(34,197,94,0.3); }
+    .check-status-badge.fail { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+    .check-status-badge.unknown { background: #18181b; color: var(--text3); border: 1px solid var(--border); }
 
     .quote-box {
-      margin-top: 6px; padding: 6px 10px; border-left: 3px solid var(--accent);
-      background: rgba(91,156,246,0.06); font-size: 12px; color: var(--text2); font-style: italic; border-radius: 0 4px 4px 0;
+      margin-top: 6px; padding: 6px 10px; border-left: 2px solid #ffffff;
+      background: #121215; font-size: 12px; color: var(--text2); font-style: italic; border-radius: 0 4px 4px 0;
+      font-family: 'JetBrains Mono', monospace;
     }
     .highlight-quote {
-      background: rgba(245,166,35,0.25); color: #fff; padding: 0 2px; border-radius: 2px; font-style: normal;
+      background: rgba(255,255,255,0.15); color: #ffffff; padding: 0 3px; border-radius: 2px; font-style: normal;
+    }
+
+    footer {
+      text-align: center; padding: 28px 24px;
+      border-top: 1px solid var(--border); margin-top: 60px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3);
+      position: relative; z-index: 1;
+    }
+
+    @media (max-width: 600px) {
+      .tab-btn span:not(.tab-icon) { display: none; }
+      .hero { padding: 36px 16px 24px; }
+      .tool-card { padding: 18px; }
     }
   </style>
 </head>
 <body>
-
-  <!-- Background glows -->
-  <div class="glow glow-1"></div>
-  <div class="glow glow-2"></div>
 
   <!-- Navbar -->
   <nav>
     <div class="nav-inner">
       <a class="logo" href="dashboard.html">
         <div class="logo-icon">🛡️</div>
-        <span class="logo-name">Ambient Shield</span>
+        <span class="logo-name">
+          Ambient Shield
+          <span class="logo-badge">LOCAL V1.0</span>
+        </span>
       </a>
       <div class="nav-status">
         <div class="nav-dot"></div>
-        Active &amp; Protecting
+        ACTIVE &amp; PROTECTING
       </div>
     </div>
   </nav>
 
   <!-- Hero -->
   <div class="hero">
-    <div class="hero-badge">🛡️ Your Quiet Digital Protector</div>
+    <div class="hero-badge">100% ON-DEVICE PRIVACY &amp; CREDIBILITY ENGINE</div>
     <h1>Ambient <span>Shield</span></h1>
-    <p>Analyze privacy policies, detect misinformation, and spot job scams — powered by local Gemma models running on-device with zero cloud AI API keys.</p>
+    <p>Dissect privacy policies, identify job recruitment scams, and inspect media tampering with local Gemma inference. Zero cloud accounts required.</p>
   </div>
 
   <!-- Tool tabs -->
@@ -311,7 +348,7 @@
         <span class="tab-icon">📄</span><span>Policy Scanner</span>
       </button>
       <button class="tab-btn" data-tab="factcheck" role="tab">
-        <span class="tab-icon">✅</span><span>Fact Checker</span>
+        <span class="tab-icon">✅</span><span>Fact &amp; Job Verifier</span>
       </button>
       <button class="tab-btn" data-tab="deepfake" role="tab">
         <span class="tab-icon">🖼️</span><span>Deepfake Detector</span>
@@ -325,28 +362,28 @@
     <div class="panel active" id="panel-policy">
       <div class="tool-card">
         <div class="tool-header">
-          <span class="tool-label" style="color:var(--accent)">Privacy Policy Analyzer</span>
-          <div class="tool-title">What Does This Policy <span style="background:linear-gradient(135deg,var(--accent),#a5c8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Actually Mean?</span></div>
-          <p class="tool-desc">Right-click any privacy page and choose "Analyze Privacy Policy" — or paste text below. In seconds you'll know <em>what they collect</em>, <em>who they sell it to</em>, <em>your rights</em>, and <em>simple opt-out steps</em>. No legalese.</p>
+          <span class="tool-label" style="color:var(--text3)">OFFLINE REGEX &amp; HEURISTICS</span>
+          <div class="tool-title">Privacy Policy Analyzer</div>
+          <p class="tool-desc">Right-click any page and choose "Analyze Privacy Policy" — or paste terms below. Ambient Shield strips boilerplate and pinpoints data collection, third-party sharing, retention windows, and opt-out routes.</p>
         </div>
 
         <!-- Source badge (hidden until auto-loaded) -->
-        <div id="policy-source-banner" style="display:none;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:rgba(91,156,246,0.08);border:1px solid rgba(91,156,246,0.2);font-size:13px;color:var(--accent)">
-          <span style="font-size:16px">📄</span>
+        <div id="policy-source-banner" style="display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:#18181b;border:1px solid var(--border2);font-size:12.5px;color:#ffffff">
+          <span style="font-size:15px">📄</span>
           <div style="flex:1;min-width:0">
             <div style="font-weight:600" id="policy-source-title"></div>
-            <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="policy-source-url"></div>
+            <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'JetBrains Mono',monospace" id="policy-source-url"></div>
           </div>
-          <span id="policy-source-chip" style="padding:3px 10px;border-radius:100px;background:rgba(91,156,246,0.15);font-size:11px;font-weight:700">Auto-loaded</span>
+          <span id="policy-source-chip" style="padding:2px 7px;border-radius:4px;background:#000000;border:1px solid var(--border);font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700">AUTO-LOADED</span>
         </div>
 
-        <textarea id="policy-input" placeholder="Paste any privacy policy or terms of service text here…&#10;&#10;Or right-click on any privacy policy page → 🛡️ Analyze Privacy Policy" rows="7"></textarea>
+        <textarea id="policy-input" placeholder="Paste privacy policy or terms text here…&#10;&#10;Or right-click on any page → 🛡️ Analyze Privacy Policy" rows="7"></textarea>
 
-        <div style="display:flex;gap:10px">
+        <div style="display:flex;gap:8px">
           <button class="btn btn-primary" id="btn-policy" style="flex:1">
             🔍 Analyze Policy
           </button>
-          <button class="btn btn-secondary" id="btn-policy-clear" title="Clear and start fresh" style="padding:12px 16px">
+          <button class="btn btn-secondary" id="btn-policy-clear" title="Clear and start fresh" style="padding:10px 14px">
             ✕
           </button>
         </div>
@@ -359,48 +396,48 @@
     <div class="panel" id="panel-factcheck">
       <div class="tool-card">
         <div class="tool-header">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
-            <span class="tool-label" style="color:var(--safe)">Unified Scanner</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+            <span class="tool-label" style="color:var(--text3)">MULTI-SOURCE RETRIEVAL &middot; LOCAL GEMMA</span>
             <span id="factcheck-type-badge" class="type-pill" style="display:none">Detected: Auto-detecting...</span>
           </div>
-          <div class="tool-title">Misinformation &amp; Job Legitimacy Scanner</div>
-          <p class="tool-desc">Paste a news claim, social media headline, or a hiring/internship notice. Ambient Shield auto-detects the content type, searches live web evidence, and evaluates authenticity with 100% local Gemma inference.</p>
+          <div class="tool-title">Misinformation &amp; Job Scam Scanner</div>
+          <p class="tool-desc">Paste a claim, news headline, or employment notice. The engine automatically classifies content, checks multi-source evidence (DDG Lite, Wikipedia, Google News), runs 7 legitimacy checks on job postings, and evaluates authenticity with Gemma.</p>
         </div>
 
-        <textarea id="factcheck-input" placeholder="Paste claim, social media post, or job notice (e.g. 'HIRING FRESHERS | HETERO | SANATH NAGAR')..." rows="6"></textarea>
+        <textarea id="factcheck-input" placeholder="Paste a claim, news statement, or hiring notice (e.g. 'HIRING FRESHERS | HETERO | SANATH NAGAR')..." rows="6"></textarea>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="btn-factcheck" style="background:linear-gradient(135deg,#0e7a4a,#3ecf8e);box-shadow:0 2px 18px rgba(62,207,142,0.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="btn-factcheck">
             🔍 Scan &amp; Verify
           </button>
-          <button type="button" id="btn-factcheck-advanced-toggle" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline">
-            ⚙️ Advanced Settings
+          <button type="button" id="btn-factcheck-advanced-toggle" style="background:none;border:none;color:var(--text2);font-size:11.5px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-decoration:underline">
+            ⚙ Settings
           </button>
         </div>
 
         <!-- Collapsible Advanced Area -->
-        <div id="factcheck-advanced-area" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px">
-          <div style="font-weight:600;margin-bottom:8px;color:var(--text)">Local Ollama Configuration</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+        <div id="factcheck-advanced-area" style="display:none;margin-bottom:14px;padding:12px 14px;background:#000000;border:1px solid var(--border);border-radius:8px;font-size:12px">
+          <div style="font-weight:600;margin-bottom:8px;color:var(--text);font-family:'JetBrains Mono',monospace">Ollama Configuration</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
             <div>
-              <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:4px">Ollama Model</label>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">MODEL</label>
               <input type="text" id="fc-setting-model" value="gemma3:4b" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
             </div>
             <div>
-              <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:4px">Ollama Host</label>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">HOST</label>
               <input type="text" id="fc-setting-host" value="http://localhost:11434" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
             </div>
           </div>
-          <div style="margin-top:8px;font-size:11px;color:var(--text3)">
-            Settings are saved locally in <code>chrome.storage.local</code>. Ensure Ollama is running with CORS enabled.
+          <div style="margin-top:6px;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">
+            Persisted locally. Ensure daemon started with <code>OLLAMA_ORIGINS="chrome-extension://*"</code>.
           </div>
         </div>
 
         <!-- Progress Indicator -->
-        <div id="factcheck-progress-bar" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(91,156,246,0.06);border:1px solid rgba(91,156,246,0.2);border-radius:10px">
+        <div id="factcheck-progress-bar" style="display:none;margin-bottom:14px;padding:12px 14px;background:#18181b;border:1px solid var(--border2);border-radius:8px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <div class="spinner" style="width:16px;height:16px"></div>
-            <div id="factcheck-progress-msg" style="font-size:13px;font-weight:500;color:var(--accent)">Analyzing content...</div>
+            <div class="spinner"></div>
+            <div id="factcheck-progress-msg" style="font-size:12.5px;font-weight:500;color:#ffffff;font-family:'JetBrains Mono',monospace">Executing scan…</div>
           </div>
           <div class="stepper-dots" style="display:flex;gap:6px;flex-wrap:wrap">
             <span id="step-classify" class="step-badge">1. Classify</span>
@@ -411,9 +448,9 @@
         </div>
 
         <!-- Privacy & Automated Check Disclosures -->
-        <div style="margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5">
-          🔒 <strong>What leaves your device:</strong> All analysis runs locally via Gemma. Web searches leave your device via DuckDuckGo / Wikipedia / Google News; no personal data or API keys are sent.<br/>
-          ⚠️ <em>Automated check, not legal or hiring advice. Verify directly with the organisation.</em>
+        <div style="margin-bottom:10px;padding:10px 12px;background:#000000;border-radius:6px;border:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5;font-family:'JetBrains Mono',monospace">
+          🔒 <strong>DATA INTEGRITY:</strong> Analysis runs on-device via Gemma. Evidence queries query DuckDuckGo Lite &amp; Wikipedia without personal identifiers.<br/>
+          ⚠️ <em>Automated verification check. Always confirm offers directly via official company career portals.</em>
         </div>
 
         <div class="result-area" id="factcheck-result"></div>
@@ -424,15 +461,15 @@
     <div class="panel" id="panel-deepfake">
       <div class="tool-card">
         <div class="tool-header">
-          <span class="tool-label" style="color:var(--caution)">Image AI</span>
-          <div class="tool-title">Deepfake Detector</div>
-          <p class="tool-desc">Upload an image or enter a URL. Ambient Shield analyzes it for signs of AI manipulation, digital forgery, and authenticity anomalies.</p>
+          <span class="tool-label" style="color:var(--text3)">FORENSIC HEURISTICS &middot; VISION AI</span>
+          <div class="tool-title">Deepfake &amp; Image Inspector</div>
+          <p class="tool-desc">Upload a suspicious image or provide a URL. Ambient Shield inspects compression markers, known artifact patterns, and multimodal indicators.</p>
         </div>
 
         <div class="file-drop" id="file-drop">
           <div class="file-drop-icon">📷</div>
-          <p class="file-drop-text">Click to upload or drag &amp; drop an image</p>
-          <p class="file-drop-hint">PNG, JPG, WebP, GIF — max 10 MB</p>
+          <p class="file-drop-text">Click to choose or drag &amp; drop image</p>
+          <p class="file-drop-hint">PNG, JPG, WebP, GIF &middot; Max 10 MB</p>
           <input type="file" id="img-file" accept="image/*" />
         </div>
 
@@ -440,15 +477,15 @@
           <img id="img-preview-el" src="" alt="Preview" />
         </div>
 
-        <div style="text-align:center;font-size:12px;color:var(--text3);margin:-8px 0">— or enter image URL —</div>
+        <div style="text-align:center;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin:-4px 0">— OR ENTER ASSET URL —</div>
 
         <div class="input-row">
-          <input type="url" id="img-url" placeholder="https://example.com/image.jpg" />
-          <button class="btn btn-secondary" id="btn-load-url">Load</button>
+          <input type="url" id="img-url" placeholder="https://example.com/asset.jpg" />
+          <button class="btn btn-secondary" id="btn-load-url" style="padding:10px 16px">Load</button>
         </div>
 
-        <button class="btn btn-primary" id="btn-deepfake" style="background:linear-gradient(135deg,#7a4800,#f5a623);box-shadow:0 2px 18px rgba(245,166,35,0.3)">
-          🖼️ Analyze Image
+        <button class="btn btn-primary" id="btn-deepfake">
+          🖼️ Inspect Media
         </button>
 
         <div class="result-area" id="deepfake-result"></div>
@@ -459,32 +496,32 @@
     <div class="panel" id="panel-settings">
       <div class="tool-card">
         <div class="tool-header">
-          <span class="tool-label" style="color:var(--text2)">Preferences</span>
+          <span class="tool-label" style="color:var(--text3)">LOCAL HARDWARE PARAMETERS</span>
           <div class="tool-title">Local Model Configuration</div>
-          <p class="tool-desc">Ambient Shield uses local inference via Ollama. No API keys or cloud accounts needed. Configure your local model name and Ollama connection below.</p>
+          <p class="tool-desc">Configure your preferred Ollama model name. Defaults to <code>gemma3:4b</code> for reasoning or <code>gemma2:2b</code> for lightweight setups.</p>
         </div>
         
         <div class="input-row">
           <input type="text" id="api-key-input" placeholder="Ollama Model Name (e.g. gemma3:4b, gemma2:2b)" />
-          <button class="btn btn-secondary" id="btn-save-key">Save Model</button>
+          <button class="btn btn-primary" id="btn-save-key">Save Model</button>
         </div>
-        <div id="settings-result" style="font-size:13px;color:var(--safe);display:none;margin-top:4px">✅ Model configuration saved successfully!</div>
+        <div id="settings-result" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--safe);display:none;margin-top:4px">✓ Model configuration saved successfully.</div>
       </div>
     </div>
 
     <!-- Legend -->
-    <div style="padding:20px 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:relative;z-index:1;">
+    <div style="padding:16px 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:relative;z-index:1;">
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--safe)"></div>Safe</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--caution)"></div>Caution</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>Danger</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--safe)"></div>SAFE</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--caution)"></div>CAUTION</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>DANGER</div>
       </div>
-      <span style="font-size:12px;color:var(--text3)">Powered by Local Gemma AI • 100% Private</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)">POWERED BY LOCAL GEMMA &middot; 0% TELEMETRY</span>
     </div>
   </div>
 
   <footer>
-    © 2026 Ambient Shield &nbsp;·&nbsp; No data stored &nbsp;·&nbsp; No signup required &nbsp;·&nbsp; Free forever
+    &copy; 2026 AMBIENT SHIELD &middot; 100% PRIVATE ON-DEVICE &middot; ZERO CLOUD TRACKING
   </footer>
 
   <script src="dashboard.js"></script>

@@ -3,24 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-[var(--accent)] text-white",
+          "border-transparent bg-white text-black font-semibold",
         secondary:
-          "border-transparent bg-[var(--bg3)] text-[var(--text2)]",
+          "border-zinc-800 bg-zinc-900/80 text-zinc-300",
         destructive:
-          "border-transparent bg-[var(--danger)] text-white",
+          "border-red-500/30 bg-red-500/10 text-red-400",
         outline:
-          "border-[var(--border2)] text-[var(--text2)]",
+          "border-zinc-800 text-zinc-300 bg-transparent",
         safe:
-          "border-transparent bg-[rgba(62,207,142,0.15)] text-[var(--safe)] border border-[rgba(62,207,142,0.3)]",
+          "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
         caution:
-          "border-transparent bg-[rgba(245,166,35,0.15)] text-[var(--caution)] border border-[rgba(245,166,35,0.3)]",
+          "border-amber-500/30 bg-amber-500/10 text-amber-400",
         danger:
-          "border-transparent bg-[rgba(255,77,109,0.15)] text-[var(--danger)] border border-[rgba(255,77,109,0.3)]",
+          "border-rose-500/30 bg-rose-500/10 text-rose-400",
       },
     },
     defaultVariants: {

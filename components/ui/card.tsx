@@ -7,7 +7,10 @@ const Card = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("glass-card p-6", className)}
+    className={cn(
+      "glass-card p-6 bg-zinc-950/80 border border-zinc-800/80 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] rounded-xl",
+      className
+    )}
     {...props}
   />
 ));
@@ -32,10 +35,9 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-tight tracking-tight text-[var(--text)]",
+      "text-lg font-semibold leading-tight tracking-tight text-white",
       className
     )}
-    style={{ fontFamily: "Syne, sans-serif" }}
     {...props}
   />
 ));
@@ -47,7 +49,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-[var(--text2)]", className)}
+    className={cn("text-sm text-zinc-400 leading-relaxed", className)}
     {...props}
   />
 ));
@@ -67,7 +69,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center pt-4", className)}
+    className={cn("flex items-center pt-4 border-t border-zinc-800/60 mt-4", className)}
     {...props}
   />
 ));
@@ -76,8 +78,8 @@ CardFooter.displayName = "CardFooter";
 export {
   Card,
   CardHeader,
+  CardFooter,
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 };

@@ -18,8 +18,9 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
-        display: ["Syne", "sans-serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        display: ["Inter", "-apple-system", "sans-serif"],
       },
       colors: {
         bg: "var(--bg)",
@@ -43,8 +44,8 @@ module.exports = {
           foreground: "var(--text)",
         },
         primary: {
-          DEFAULT: "var(--accent)",
-          foreground: "#ffffff",
+          DEFAULT: "#ffffff",
+          foreground: "#000000",
         },
         secondary: {
           DEFAULT: "var(--bg3)",
@@ -54,7 +55,7 @@ module.exports = {
           DEFAULT: "var(--bg3)",
           foreground: "var(--text3)",
         },
-        ring: "var(--accent)",
+        ring: "rgba(255, 255, 255, 0.4)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -71,12 +72,12 @@ module.exports = {
           to: { height: "0" },
         },
         "fade-in": {
-          from: { opacity: "0", transform: "translateY(12px)" },
+          from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "glow-pulse": {
-          "0%, 100%": { opacity: "0.4" },
-          "50%": { opacity: "0.8" },
+          "0%, 100%": { opacity: "0.08" },
+          "50%": { opacity: "0.18" },
         },
         shimmer: {
           from: { backgroundPosition: "0 0" },
@@ -86,8 +87,8 @@ module.exports = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.6s ease-out forwards",
-        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
+        "fade-in": "fade-in 0.4s ease-out forwards",
+        "glow-pulse": "glow-pulse 4s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
       },
     },

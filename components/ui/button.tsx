@@ -5,28 +5,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--accent)] text-white hover:bg-[var(--accent2)] shadow-[0_0_20px_rgba(91,156,246,0.25)] hover:shadow-[0_0_28px_rgba(91,156,246,0.4)]",
+          "bg-white text-black font-semibold hover:bg-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.4)]",
         destructive:
-          "bg-[var(--danger)] text-white hover:opacity-90",
+          "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20",
         outline:
-          "border border-[var(--border2)] bg-transparent text-[var(--text)] hover:bg-[var(--bg3)] hover:border-[var(--accent)]",
+          "border border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:bg-zinc-900 hover:text-white hover:border-zinc-700 shadow-sm",
         secondary:
-          "bg-[var(--bg3)] text-[var(--text2)] hover:bg-[var(--bg4)] hover:text-[var(--text)]",
+          "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800/80 hover:text-white",
         ghost:
-          "hover:bg-[var(--bg3)] text-[var(--text2)] hover:text-[var(--text)]",
-        link: "text-[var(--accent)] underline-offset-4 hover:underline",
+          "text-zinc-400 hover:bg-zinc-900 hover:text-white",
+        link: "text-white underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-5 py-2",
+        default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-12 px-8 text-base",
-        xl: "h-14 px-10 text-base font-semibold",
-        icon: "h-10 w-10",
+        lg: "h-11 px-6 text-sm font-medium",
+        xl: "h-12 px-8 text-base font-semibold",
+        icon: "h-9 w-9",
       },
     },
     defaultVariants: {

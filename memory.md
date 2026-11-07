@@ -62,6 +62,33 @@
 
 ## 5. Changelog & Modifications Ledger
 
+### [2026-11-07] — Frontend Rebuild: 21st.dev White and Black Professional Theme
+- **Frontend-Design Skill Imported:**
+  - Skill `frontend-design` from `https://github.com/Ilm-Alan/frontend-design` formally imported and integrated.
+  - Direction: Swiss & Industrial Monochrome anchor with 21st.dev aesthetic tokens.
+  - Surface: Pitch black `#000000` / `#09090b` / `#121215`, crisp 1px borders `rgba(255,255,255,0.08)`, and pure white `#ffffff` high-contrast action triggers.
+  - Typography: Swapped to `Inter` and `JetBrains Mono` with tabular numeric data display.
+  - Zero AI slop, no filler labels, authentic product nomenclature and exact parameter metrics.
+- **Strict Frontend Boundary Preserved:**
+  - 100% of backend, MV3 service workers, heuristics, scanner retrieval engines, and API endpoints remained untouched.
+  - 100% of DOM IDs, form element names, storage keys, and event listeners strictly preserved.
+- **Web Prototype Rebuilt (`app/`, `components/`):**
+  - Updated `app/globals.css`, `tailwind.config.ts`, `app/layout.tsx`.
+  - Rebuilt `components/ui/*`: `button.tsx` (high-contrast white CTA), `card.tsx` (top hairline inset sheen), `badge.tsx`, `input.tsx`, `textarea.tsx`, `tabs.tsx`.
+  - Rebuilt `components/layout/*`: `Navbar.tsx` (monochrome status badge, green pulse, inverted CTA), `Footer.tsx`.
+  - Rebuilt `components/analyze/*`: `AnalyzeTabs.tsx` (capsule segmented controls), `FactChecker.tsx` (7-point legitimacy checklist cards, substring citations), `PolicyAnalyzer.tsx`, `ImageAnalyzer.tsx`, `HistoryPanel.tsx`.
+  - Rebuilt `components/shared/*`: `ResultCard.tsx`, `EmptyState.tsx`, `RateLimitBar.tsx`, `CredibilityRing.tsx`.
+  - Rebuilt `app/page.tsx` (sleek hero with telemetry stats, clean features grid, pipeline steps), `app/analyze/page.tsx`, `app/settings/page.tsx`, and `SettingsForm.tsx`.
+- **Extension UI Rebuilt (`extension/`):**
+  - Rebuilt `popup.html`: High-contrast black & white theme, clean toggle sliders, monospace page URL chips, modal PIN dialogs.
+  - Rebuilt `dashboard.html`: Obsidian workspace with segmented tool tabs, monospace telemetry, and clean verification tables.
+  - Rebuilt `parental-lock.html` & `blocked.html`: High-contrast protection and anti-tamper challenge screens.
+  - Rebuilt `content.css` & `content-firewall.css`: Clean black/white aura badges, scan buttons, and full-screen blocking overlay.
+- **Build & Test Verification:**
+  - All 30 unit tests passing (`npm test`).
+  - Next.js static production build verified passing (`npm run build`).
+  - Extension bundling script verified passing (`npm run build:ext`).
+
 ### [2026-11-07] — Parental Mode Renaming & Anti-Tamper Extension Removal Protection
 - **Terminology Normalization:**
   - Standardized all references from "Parental / Work Mode" to simply "Parental Mode" across `extension/popup.html`, `extension/popup.js`, `extension/blocked.html`, and `extension/background.js`.
