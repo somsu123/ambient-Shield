@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔒 Parental Mode Protection — Ambient Shield</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080c14;
+      color: #dce8f8;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+    }
+    .container {
+      max-width: 520px; width: 100%;
+      background: #0e1522;
+      border: 1px solid rgba(255, 77, 109, 0.35);
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 30px rgba(255,77,109,0.12);
+      text-align: center;
+    }
+
+    .shield-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(255,77,109,0.12);
+      border: 1px solid rgba(255,77,109,0.3);
+      font-size: 36px; margin-bottom: 20px;
+      animation: pulseGlow 2.5s ease-in-out infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(255,77,109,0.2); }
+      50% { box-shadow: 0 0 30px rgba(255,77,109,0.45); }
+    }
+
+    h1 {
+      font-size: 22px; font-weight: 800;
+      color: #ff4d6d; margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      font-size: 13.5px; color: rgba(180,200,230,0.75);
+      line-height: 1.6; margin-bottom: 24px;
+    }
+
+    .target-url-box {
+      background: rgba(8, 12, 20, 0.8);
+      border: 1px dashed rgba(255,77,109,0.4);
+      border-radius: 10px; padding: 8px 14px;
+      font-size: 12px; color: #ff859d;
+      font-family: monospace; word-break: break-all;
+      margin-bottom: 22px; display: inline-block; max-width: 100%;
+    }
+
+    .form-group {
+      margin-bottom: 20px; text-align: left;
+    }
+    .input-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #9cb5d9; margin-bottom: 8px;
+    }
+    .input-wrapper {
+      position: relative; display: flex; align-items: center;
+    }
+    .pin-input {
+      width: 100%; padding: 12px 42px 12px 16px;
+      background: #080c14; border: 1px solid rgba(91,156,246,0.3);
+      border-radius: 10px; font-size: 16px; color: #fff;
+      font-family: monospace; letter-spacing: 4px; text-align: center;
+      outline: none; transition: all 0.2s;
+    }
+    .pin-input:focus {
+      border-color: #5b9cf6; box-shadow: 0 0 12px rgba(91,156,246,0.25);
+    }
+    .pin-input.error {
+      border-color: #ff4d6d !important;
+      animation: shake 0.35s ease;
+    }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+    .toggle-visibility {
+      position: absolute; right: 12px;
+      background: none; border: none; cursor: pointer;
+      color: #7289a8; font-size: 14px; padding: 4px;
+    }
+    .toggle-visibility:hover { color: #dce8f8; }
+
+    .error-msg {
+      min-height: 20px; font-size: 12px; color: #ff4d6d;
+      margin-top: 6px; text-align: center; font-weight: 500;
+    }
+    .success-msg {
+      min-height: 20px; font-size: 12px; color: #3ecf8e;
+      margin-top: 6px; text-align: center; font-weight: 600;
+    }
+
+    .btn-col {
+      display: flex; flex-direction: column; gap: 10px; margin-top: 8px;
+    }
+    .btn {
+      width: 100%; padding: 12px 20px; border-radius: 10px;
+      font-size: 13.5px; font-weight: 600; cursor: pointer;
+      border: 1px solid transparent; transition: all 0.18s ease;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary {
+      background: #2563eb; color: #fff; border-color: #3b82f6;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-danger {
+      background: rgba(255,77,109,0.12); color: #ff6b84;
+      border-color: rgba(255,77,109,0.3);
+    }
+    .btn-danger:hover {
+      background: rgba(255,77,109,0.2); border-color: #ff4d6d;
+    }
+    .btn-ghost {
+      background: transparent; color: #8ba2c4; border-color: rgba(255,255,255,0.08);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.05); color: #dce8f8; }
+
+    /* OS-level prevention info */
+    .os-card {
+      margin-top: 26px; text-align: left;
+      background: rgba(8, 12, 20, 0.9);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .os-header {
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .os-title {
+      font-size: 12px; font-weight: 700; color: #93c5fd;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .os-toggle-icon { font-size: 12px; color: #64748b; transition: transform 0.2s; }
+    .os-body {
+      display: none; margin-top: 12px; font-size: 11.5px; color: #94a3b8; line-height: 1.6;
+    }
+    .os-body.open { display: block; }
+    .code-box {
+      background: #030712; border: 1px solid #1e293b;
+      border-radius: 8px; padding: 8px 12px;
+      font-family: monospace; font-size: 11px; color: #38bdf8;
+      word-break: break-all; margin: 8px 0;
+      position: relative;
+    }
+    .btn-copy {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      background: #1e293b; color: #cbd5e1; border: 1px solid #334155;
+      border-radius: 6px; cursor: pointer; margin-top: 4px;
+    }
+    .btn-copy:hover { background: #334155; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="shield-badge">🛡️</div>
+    <h1>Parental Mode Protection</h1>
+    <p class="subtitle">
+      Ambient Shield extension settings, disabling, and removal are locked.<br/>
+      Enter your Parental PIN / Password to manage extension settings.
+    </p>
+
+    <div class="target-url-box" id="target-display">Attempted Access: chrome://extensions</div>
+
+    <div class="form-group">
+      <label class="input-label" for="pin-input">Parental PIN / Password</label>
+      <div class="input-wrapper">
+        <input
+          class="pin-input"
+          id="pin-input"
+          type="password"
+          placeholder="••••••"
+          autocomplete="current-password"
+          autofocus
+        />
+        <button class="toggle-visibility" id="btn-toggle-vis" type="button" title="Show/Hide PIN">👁️</button>
+      </div>
+      <div class="error-msg" id="status-msg"></div>
+    </div>
+
+    <div class="btn-col">
+      <button class="btn btn-primary" id="btn-unlock-temp">
+        <span>🔓</span> Unlock Extension Settings (2 Minutes)
+      </button>
+      <button class="btn btn-danger" id="btn-disable-mode">
+        <span>🛑</span> Turn Off Parental Mode Completely
+      </button>
+      <button class="btn btn-ghost" id="btn-go-back">
+        <span>←</span> Return to Safe Browsing
+      </button>
+    </div>
+
+    <!-- OS-Level Anti-Removal Option -->
+    <div class="os-card">
+      <div class="os-header" id="os-header">
+        <span class="os-title">🛡️ Permanent OS Anti-Removal Protection</span>
+        <span class="os-toggle-icon" id="os-arrow">▼</span>
+      </div>
+      <div class="os-body" id="os-body">
+        <p>
+          To permanently block right-click "Remove from Chrome" at the Windows system level so children cannot delete the extension from the toolbar, run this in PowerShell as Administrator:
+        </p>
+        <div class="code-box" id="reg-cmd-box">Loading command…</div>
+        <button class="btn-copy" id="btn-copy-cmd">📋 Copy PowerShell Command</button>
+        <p style="margin-top:8px;font-size:10.5px;color:#64748b">
+          To remove this policy later when you want to uninstall, run:<br/>
+          <code style="color:#94a3b8">reg delete "HKCU\Software\Policies\Google\Chrome\ExtensionInstallForcelist" /v 1 /f</code>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="parental-lock.js"></script>
+</body>
+</html>
+

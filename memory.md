@@ -62,6 +62,27 @@
 
 ## 5. Changelog & Modifications Ledger
 
+### [2026-11-07] — Parental Mode Renaming & Anti-Tamper Extension Removal Protection
+- **Terminology Normalization:**
+  - Standardized all references from "Parental / Work Mode" to simply "Parental Mode" across `extension/popup.html`, `extension/popup.js`, `extension/blocked.html`, and `extension/background.js`.
+- **Anti-Tamper & Extension Removal Guard:**
+  - Intercepts navigation to browser management and settings pages (`chrome://extensions*`, `chrome://settings*`, `edge://extensions*`, `edge://settings*`, `brave://extensions*`, `opera://extensions*`, `about:addons*`, `about:preferences*`) whenever Parental Mode is active.
+  - Automatically redirects unauthorized access to `chrome-extension://<id>/parental-lock.html` with attempt destination tracked.
+  - Developed dedicated `parental-lock.html` & `parental-lock.js` challenge page:
+    - Requires Parental PIN / Password verification before granting access.
+    - Features a 2-minute temporary unlock grace period (`UNLOCK_PARENTAL_TEMPORARY`) with auto-re-locking timer.
+    - Provides one-click password-protected Parental Mode deactivation (`PARENTAL_MODE_OFF`).
+    - Provides instant return to safe browsing.
+    - Includes one-click copyable Windows Registry / Group Policy command (`ExtensionInstallForcelist`) to completely grey out and disable native right-click "Remove from Chrome" at the OS level.
+- **Enhanced Popup PIN Management (`extension/popup.html`, `extension/popup.js`):**
+  - Added dynamic PIN storage in `chrome.storage.local.parentalPassword` (default `"123456"`).
+  - Added dedicated Change PIN modal dialog (`#modal-change-pin`) allowing parents to securely update their PIN (minimum 4 characters).
+  - Added anti-tamper status indicator badge (`#parental-tamper-badge`) displaying "🛡️ Anti-Tamper: Removal & Settings Locked" when active.
+  - Added password-protected Whitelist editor directly accessible from the popup.
+- **Verification & Testing (`tests/parental.test.js`):**
+  - Added comprehensive test suite verifying protected management URLs, active vs inactive blocking, 2-minute unlock expiry, internal page whitelisting, URL filtering, and GPO command formatting.
+  - All 30 tests across 4 suites passing (`npm test`). Extension build verified clean (`npm run build:ext`).
+
 ### [2026-11-07] — Phase 0 to 8 Complete: Unified Misinformation & Job Legitimacy Scanner
 - **DDG Lite HTML & RDAP Fixes:**
   - Resolved DuckDuckGo Lite attribute order regex: updated to match `class='result-link'` and direct `href` regardless of attribute order (`rel`, `class`, `href`), fixing 0-hit issue on company website, careers, and LinkedIn searches.

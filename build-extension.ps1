@@ -129,7 +129,7 @@ if (Test-Path $staleNextAssets) { Remove-Item $staleNextAssets -Recurse -Force }
 $preserve = @(
     "manifest.json", "background.js", "content.js", "content.css",
     "content-firewall.js", "content-firewall.css", "block-rules.json",
-    "dashboard.html", "dashboard.js", "blocked.html",
+    "dashboard.html", "dashboard.js", "blocked.html", "parental-lock.html", "parental-lock.js",
     "messages.js", "logger.js", "heuristics.js",
     "popup.html", "popup.js", "generate-icons.html",
     "icon16.svg", "icon48.svg", "icon128.svg"

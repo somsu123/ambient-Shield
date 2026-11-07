@@ -247,7 +247,7 @@
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ── Parental/Work Mode Modal Overlay ── */
+    /* ── Parental Mode Modal Overlay ── */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 9999;
       background: rgba(8,12,20,0.92);
@@ -383,16 +383,21 @@
 
     <div class="divider"></div>
 
-    <!-- ── Parental / Work Mode ── -->
-    <span class="section-label">Parental / Work Mode</span>
+    <!-- ── Parental Mode ── -->
+    <span class="section-label">Parental Mode</span>
     <div class="toggle-group">
       <div class="toggle-row" id="parental-row">
         <div class="toggle-info">
           <div style="display:flex;align-items:center;gap:6px">
-            <span class="toggle-name" id="parental-label">🔒 Parental / Work Mode</span>
+            <span class="toggle-name" id="parental-label">🔒 Parental Mode</span>
           </div>
           <span class="toggle-desc">Lock browser to allowed websites only</span>
           <div class="parental-active-badge" id="parental-badge">🔴 ACTIVE — Only whitelisted sites allowed</div>
+          <div class="parental-tamper-badge" id="parental-tamper-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#38bdf8;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);border-radius:6px;padding:2px 6px;margin-top:4px;">🛡️ Anti-Tamper: Removal & Settings Locked</div>
+          <div id="parental-actions-row" style="margin-top:4px;display:flex;gap:12px;align-items:center;">
+            <button id="btn-change-pin" type="button" style="background:none;border:none;color:#60a5fa;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;">Change PIN</button>
+            <button id="btn-edit-whitelist" type="button" style="display:none;background:none;border:none;color:#60a5fa;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;">Allowed Sites</button>
+          </div>
         </div>
         <label class="toggle-switch" id="parental-switch-label" title="Toggle parental mode">
           <input type="checkbox" id="toggle-parental" />
@@ -480,6 +485,21 @@
       <div class="modal-btn-row">
         <button class="btn btn-secondary" id="modal-wl-cancel">Cancel</button>
         <button class="btn btn-primary" id="modal-wl-done">✓ Activate Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL 3: Change PIN ── -->
+  <div class="modal-overlay hidden" id="modal-change-pin">
+    <div class="modal-box">
+      <div class="modal-title">🔑 Change Parental PIN</div>
+      <div class="modal-subtitle">Update your secret parental PIN / Password</div>
+      <input class="modal-input" id="modal-old-pin" type="password" placeholder="Current PIN" maxlength="20" autocomplete="off" style="margin-bottom:6px" />
+      <input class="modal-input" id="modal-new-pin" type="password" placeholder="New PIN (min 4 chars)" maxlength="20" autocomplete="off" />
+      <div class="modal-error" id="modal-pin-error"></div>
+      <div class="modal-btn-row">
+        <button class="btn btn-secondary" id="modal-pin-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-pin-save">Save PIN</button>
       </div>
     </div>
   </div>

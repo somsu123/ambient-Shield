@@ -82,6 +82,7 @@
                                          "resources":  [
                                                            "dashboard.html",
                                                            "blocked.html",
+                                                           "parental-lock.html",
                                                            "index.html",
                                                            "analyze/index.html",
                                                            "settings/index.html",

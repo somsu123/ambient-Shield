@@ -18,17 +18,24 @@ import {
 // STATE & PERSISTENCE (MV3 Lifecycle Resilient)
 // ─────────────────────────────────────────────────────────────────────────────
 
+let parentalModeActive = false;
 let parentalWhitelist = [];
+let parentalPassword = "123456";
+let parentalTempUnlockUntil = 0;
 let localOnlyMode = false;
 
 // Rehydrate state on service worker wake-up
 async function rehydrateState() {
   try {
     const data = await new Promise((resolve) => {
-      chrome.storage.local.get(["parentalMode", "parentalWhitelist", "localOnlyMode"], resolve);
+      chrome.storage.local.get(["parentalMode", "parentalWhitelist", "parentalPassword", "localOnlyMode"], resolve);
     });
-    if (data.parentalMode && Array.isArray(data.parentalWhitelist)) {
+    parentalModeActive = Boolean(data.parentalMode);
+    if (parentalModeActive && Array.isArray(data.parentalWhitelist)) {
       parentalWhitelist = data.parentalWhitelist;
+    }
+    if (typeof data.parentalPassword === "string" && data.parentalPassword) {
+      parentalPassword = data.parentalPassword;
     }
     localOnlyMode = Boolean(data.localOnlyMode);
     logStage("LIFECYCLE", "Background service worker state restored.");
@@ -39,9 +46,20 @@ async function rehydrateState() {
 rehydrateState();
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local") {
-    if (changes.parentalWhitelist) parentalWhitelist = changes.parentalWhitelist.newValue || [];
-    if (changes.localOnlyMode) localOnlyMode = Boolean(changes.localOnlyMode.newValue);
+  if (area !== "local") return;
+
+  const prevActive = parentalModeActive;
+
+  if (changes.parentalMode !== undefined) parentalModeActive = Boolean(changes.parentalMode.newValue);
+  if (changes.parentalWhitelist) parentalWhitelist = changes.parentalWhitelist.newValue || [];
+  if (changes.parentalPassword) parentalPassword = changes.parentalPassword.newValue || "123456";
+  if (changes.localOnlyMode) localOnlyMode = Boolean(changes.localOnlyMode.newValue);
+
+  // If parental mode just turned ON (storage-driven, no need for a message), enforce immediately.
+  // This is the reliable path: popup.js writes storage → onChanged fires → enforce.
+  if (!prevActive && parentalModeActive && parentalWhitelist.length > 0) {
+    logStage("PARENTAL", "Mode activated via storage change — enforcing on all tabs.");
+    enforceOnAllTabs();
   }
 });
 
@@ -122,17 +140,57 @@ async function injectBlock(tabId, url) {
   } catch (_) {}
 }
 
+function isProtectedManagementUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  const lower = url.toLowerCase().trim();
+  return (
+    lower.startsWith("chrome://extensions") ||
+    lower.startsWith("chrome://settings") ||
+    lower.startsWith("edge://extensions") ||
+    lower.startsWith("edge://settings") ||
+    lower.startsWith("brave://extensions") ||
+    lower.startsWith("brave://settings") ||
+    lower.startsWith("opera://extensions") ||
+    lower.startsWith("opera://settings") ||
+    lower.startsWith("about:addons") ||
+    lower.startsWith("about:preferences")
+  );
+}
+
+function isManagementUnlocked() {
+  return Date.now() < parentalTempUnlockUntil;
+}
+
 function isAllowedUrl(url) {
   if (!url) return true;
+
+  // Always permit Ambient Shield extension pages (parental lock, blocked, dashboard, popup)
+  if (
+    url.includes("parental-lock.html") ||
+    url.includes("blocked.html") ||
+    url.includes("dashboard.html") ||
+    url.includes("popup.html")
+  ) {
+    return true;
+  }
+
+  // If Parental Mode is active, check protected extension management / settings URLs
+  if (parentalModeActive && isProtectedManagementUrl(url)) {
+    return isManagementUnlocked();
+  }
+
+  // Allow browser internal schemes if not protected management
   if (
     url.startsWith("chrome://") ||
     url.startsWith("chrome-extension://") ||
     url.startsWith("about:") ||
-    url.startsWith("data:") ||
-    url.includes("blocked.html")
-  ) return true;
+    url.startsWith("data:")
+  ) {
+    return true;
+  }
 
-  if (parentalWhitelist.length === 0) return true;
+  // If parental mode is not active or whitelist is empty, allow navigation
+  if (!parentalModeActive || parentalWhitelist.length === 0) return true;
 
   try {
     const visitHost = new URL(url).hostname.replace(/^www\./, "");
@@ -146,18 +204,34 @@ function isAllowedUrl(url) {
 }
 
 async function blockTab(tabId, url) {
-  const blockedPage = chrome.runtime.getURL("blocked.html") + "?url=" + encodeURIComponent(url);
-  try { await chrome.tabs.update(tabId, { url: blockedPage }); } catch (_) {}
+  const isMgmt = isProtectedManagementUrl(url);
+  const destPage = isMgmt
+    ? chrome.runtime.getURL("parental-lock.html") + "?target=" + encodeURIComponent(url)
+    : chrome.runtime.getURL("blocked.html") + "?url=" + encodeURIComponent(url);
+
+  try {
+    await chrome.tabs.update(tabId, { url: destPage });
+  } catch (_) {
+    // Privileged browser pages (like chrome://extensions) may block tabs.update; close & recreate tab
+    if (isMgmt) {
+      try {
+        await chrome.tabs.remove(tabId);
+        await chrome.tabs.create({ url: destPage });
+      } catch (_) {}
+    }
+  }
 }
 
 async function enforceOnAllTabs() {
-  if (parentalWhitelist.length === 0) return;
-  const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    const url = tab.url || "";
-    if (!url || isAllowedUrl(url)) continue;
-    await blockTab(tab.id, url);
-  }
+  if (!parentalModeActive) return;
+  try {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      const url = tab.url || tab.pendingUrl || "";
+      if (!url || isAllowedUrl(url)) continue;
+      await blockTab(tab.id, url);
+    }
+  } catch (_) {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -597,6 +671,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       break;
 
     case MESSAGE_ACTIONS.PARENTAL_MODE_ON: {
+      parentalModeActive = true;
       parentalWhitelist = message.whitelist || [];
       chrome.storage.local.set({ parentalMode: true, parentalWhitelist }, () => {
         enforceOnAllTabs();
@@ -606,8 +681,55 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     case MESSAGE_ACTIONS.PARENTAL_MODE_OFF: {
+      const enteredPw = message.password;
+      if (enteredPw && enteredPw !== parentalPassword) {
+        sendResponse({ ok: false, error: "Incorrect Parental PIN / Password" });
+        break;
+      }
+      parentalModeActive = false;
       parentalWhitelist = [];
+      parentalTempUnlockUntil = 0;
       chrome.storage.local.set({ parentalMode: false, parentalWhitelist: [] }, () => {
+        sendResponse({ ok: true });
+      });
+      break;
+    }
+
+    case MESSAGE_ACTIONS.UNLOCK_PARENTAL_TEMPORARY: {
+      const enteredPw = message.password || "";
+      if (enteredPw === parentalPassword) {
+        const durationSec = Number(message.durationSeconds) || 120;
+        parentalTempUnlockUntil = Date.now() + (durationSec * 1000);
+        sendResponse({ ok: true, expiresAt: parentalTempUnlockUntil, durationSeconds: durationSec });
+      } else {
+        sendResponse({ ok: false, error: "Incorrect Parental PIN / Password" });
+      }
+      break;
+    }
+
+    case MESSAGE_ACTIONS.VERIFY_PARENTAL_PIN: {
+      const enteredPw = message.password || "";
+      if (enteredPw === parentalPassword) {
+        sendResponse({ ok: true });
+      } else {
+        sendResponse({ ok: false, error: "Incorrect Parental PIN / Password" });
+      }
+      break;
+    }
+
+    case MESSAGE_ACTIONS.SET_PARENTAL_PIN: {
+      const currentPw = message.currentPassword || "";
+      const newPw = (message.newPassword || "").trim();
+      if (currentPw !== parentalPassword) {
+        sendResponse({ ok: false, error: "Current PIN / Password is incorrect" });
+        break;
+      }
+      if (!newPw || newPw.length < 4) {
+        sendResponse({ ok: false, error: "New PIN must be at least 4 characters" });
+        break;
+      }
+      parentalPassword = newPw;
+      chrome.storage.local.set({ parentalPassword: newPw }, () => {
         sendResponse({ ok: true });
       });
       break;
@@ -628,38 +750,55 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // Firewall Navigation Listeners
+
+// webNavigation fires BEFORE the page loads — fastest interception point
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
-  if (parentalWhitelist.length === 0) return;
-  if (details.frameId !== 0) return;
+  if (!parentalModeActive) return;
+  if (details.frameId !== 0) return; // only main frame
   if (isAllowedUrl(details.url)) return;
   await blockTab(details.tabId, details.url);
 });
 
+// tabs.onUpdated is a safety net — only act when a URL change is actually happening
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  const url = changeInfo.url || tab.url;
-  if (!url) return;
+  // Only intercept actual URL navigations, not status/favicon/title updates
+  const url = changeInfo.url;   // only set when URL actually changes
+  const status = changeInfo.status; // "loading" / "complete"
 
-  if (isAdultUrl(url)) {
-    injectBlock(tabId, url);
+  // Adult content firewall — runs regardless of parental mode
+  const checkUrl = url || (status === "loading" ? tab.url : null);
+  if (checkUrl && isAdultUrl(checkUrl)) {
+    injectBlock(tabId, checkUrl);
     return;
   }
 
-  if (parentalWhitelist.length > 0 && changeInfo.status === "loading") {
-    if (!isAllowedUrl(url)) {
-      await blockTab(tabId, url);
-    }
+  if (!parentalModeActive) return;
+
+  // Only block when we have a concrete URL change or the tab just started loading
+  if (url && !isAllowedUrl(url)) {
+    await blockTab(tabId, url);
+  } else if (status === "loading" && tab.url && !isAllowedUrl(tab.url)) {
+    await blockTab(tabId, tab.url);
   }
 });
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  if (parentalWhitelist.length === 0) return;
+  if (!parentalModeActive) return;
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);
-    const url = tab.url || "";
+    const url = tab.url || tab.pendingUrl || "";
     if (url && !isAllowedUrl(url)) {
       await blockTab(activeInfo.tabId, url);
     }
   } catch (_) {}
+});
+
+chrome.tabs.onCreated.addListener(async (tab) => {
+  if (!parentalModeActive) return;
+  const url = tab.pendingUrl || tab.url || "";
+  if (url && !isAllowedUrl(url)) {
+    await blockTab(tab.id, url);
+  }
 });
 
 // Context Menus

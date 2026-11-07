@@ -254,28 +254,45 @@ chrome.storage.local.get(["ollamaModel"], (result) => {
 loadCurrentTab();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PARENTAL / WORK MODE
-// password is intentionally simple for hackathon — change PARENTAL_MODE_PASSWORD to update it
+// PARENTAL MODE (Anti-Tamper & Extension Removal Protection)
 // ─────────────────────────────────────────────────────────────────────────────
-const PARENTAL_MODE_PASSWORD = "123456";
+let PARENTAL_MODE_PASSWORD = "123456";
 
-const toggleParental    = document.getElementById("toggle-parental");
-const parentalLabel     = document.getElementById("parental-label");
-const parentalBadge     = document.getElementById("parental-badge");
-const modalPassword     = document.getElementById("modal-password");
-const modalPwTitle      = document.getElementById("modal-pw-title");
-const modalPwSubtitle   = document.getElementById("modal-pw-subtitle");
-const modalPwInput      = document.getElementById("modal-pw-input");
-const modalPwError      = document.getElementById("modal-pw-error");
-const modalPwCancel     = document.getElementById("modal-pw-cancel");
-const modalPwConfirm    = document.getElementById("modal-pw-confirm");
-const modalWhitelist    = document.getElementById("modal-whitelist");
-const urlChipsContainer = document.getElementById("url-chips-container");
-const urlInput          = document.getElementById("url-input");
-const btnAddUrl         = document.getElementById("btn-add-url");
-const urlError          = document.getElementById("url-error");
-const modalWlCancel     = document.getElementById("modal-wl-cancel");
-const modalWlDone       = document.getElementById("modal-wl-done");
+chrome.storage.local.get(["parentalPassword"], res => {
+  if (res?.parentalPassword) {
+    PARENTAL_MODE_PASSWORD = res.parentalPassword;
+  }
+});
+
+const toggleParental       = document.getElementById("toggle-parental");
+const parentalLabel        = document.getElementById("parental-label");
+const parentalBadge        = document.getElementById("parental-badge");
+const parentalTamperBadge  = document.getElementById("parental-tamper-badge");
+const btnChangePin         = document.getElementById("btn-change-pin");
+const btnEditWhitelist     = document.getElementById("btn-edit-whitelist");
+
+const modalPassword        = document.getElementById("modal-password");
+const modalPwTitle         = document.getElementById("modal-pw-title");
+const modalPwSubtitle      = document.getElementById("modal-pw-subtitle");
+const modalPwInput         = document.getElementById("modal-pw-input");
+const modalPwError         = document.getElementById("modal-pw-error");
+const modalPwCancel        = document.getElementById("modal-pw-cancel");
+const modalPwConfirm       = document.getElementById("modal-pw-confirm");
+
+const modalWhitelist       = document.getElementById("modal-whitelist");
+const urlChipsContainer    = document.getElementById("url-chips-container");
+const urlInput             = document.getElementById("url-input");
+const btnAddUrl            = document.getElementById("btn-add-url");
+const urlError             = document.getElementById("url-error");
+const modalWlCancel        = document.getElementById("modal-wl-cancel");
+const modalWlDone          = document.getElementById("modal-wl-done");
+
+const modalChangePin       = document.getElementById("modal-change-pin");
+const modalOldPin          = document.getElementById("modal-old-pin");
+const modalNewPin          = document.getElementById("modal-new-pin");
+const modalPinError        = document.getElementById("modal-pin-error");
+const modalPinCancel       = document.getElementById("modal-pin-cancel");
+const modalPinSave         = document.getElementById("modal-pin-save");
 
 let pendingWhitelist = [];
 let pwResolve        = null;
@@ -327,7 +344,7 @@ modalPwConfirm.addEventListener("click", () => {
   if (modalPwInput.value === PARENTAL_MODE_PASSWORD) {
     closePwModal(true);
   } else {
-    modalPwError.textContent = "Incorrect password. Try again.";
+    modalPwError.textContent = "Incorrect PIN/password. Try again.";
     modalPwInput.classList.add("error");
     modalPwInput.value = "";
     setTimeout(() => modalPwInput.classList.remove("error"), 500);
@@ -382,8 +399,14 @@ urlInput.addEventListener("keydown", e => {
 function setParentalUI(isActive) {
   toggleParental.checked = isActive;
   parentalBadge.classList.toggle("show", isActive);
+  if (parentalTamperBadge) {
+    parentalTamperBadge.style.display = isActive ? "inline-flex" : "none";
+  }
+  if (btnEditWhitelist) {
+    btnEditWhitelist.style.display = isActive ? "inline" : "none";
+  }
   if (parentalLabel) {
-    parentalLabel.textContent = isActive ? "Parental / Work Mode: ON 🔒" : "Parental / Work Mode";
+    parentalLabel.textContent = isActive ? "Parental Mode: ON 🔒" : "Parental Mode";
   }
 }
 
@@ -395,8 +418,8 @@ toggleParental.addEventListener("change", async () => {
     // ── TURN ON FLOW ──────────────────────────────────────────────────────────
     // Step 1: Password
     const pwOk = await askPassword(
-      "Enable Parental / Work Mode",
-      "Enter password to activate this mode",
+      "Enable Parental Mode",
+      "Enter Parental PIN / Password to activate this mode",
       "Continue"
     );
     if (!pwOk) { setParentalUI(false); return; }
@@ -409,33 +432,150 @@ toggleParental.addEventListener("change", async () => {
       return;
     }
 
-    // Step 3: Activate
-    chrome.storage.local.set({ parentalMode: true, parentalWhitelist: whitelist }, () => {
-      chrome.runtime.sendMessage({ action: "PARENTAL_MODE_ON", whitelist });
-      setParentalUI(true);
-      showToast("🔒 Parental Mode Activated!");
-    });
+    // Step 3: Activate — write storage FIRST (storage.onChanged in background does the
+    // enforcement reliably, even if the service worker was just woken up).
+    // Then also send a message as a secondary path to ensure enforceOnAllTabs() runs.
+    chrome.storage.local.set(
+      { parentalMode: true, parentalWhitelist: whitelist },
+      () => {
+        if (chrome.runtime.lastError) {
+          showToast("⚠ Could not save Parental Mode: " + chrome.runtime.lastError.message);
+          setParentalUI(false);
+          return;
+        }
+        // Secondary message path — sends PARENTAL_MODE_ON with callback so we know it arrived
+        chrome.runtime.sendMessage(
+          { action: "PARENTAL_MODE_ON", whitelist },
+          (resp) => {
+            if (chrome.runtime.lastError) {
+              // Service worker rejected message — but storage.onChanged already activated it
+              // so this is non-fatal
+              console.warn("[Parental] sendMessage failed (non-fatal):", chrome.runtime.lastError.message);
+            }
+          }
+        );
+        setParentalUI(true);
+        showToast("🔒 Parental Mode Activated! Extension removal locked.");
+      }
+    );
 
   } else {
     // ── TURN OFF FLOW ─────────────────────────────────────────────────────────
     toggleParental.checked = true; // visually keep ON until password confirmed
 
     const pwOk = await askPassword(
-      "Disable Parental / Work Mode",
-      "Enter password to disable this mode",
+      "Disable Parental Mode",
+      "Enter Parental PIN / Password to disable this mode and unlock removal",
       "Confirm Disable"
     );
     if (!pwOk) return; // stay on
 
-    chrome.storage.local.set({ parentalMode: false, parentalWhitelist: [] }, () => {
-      chrome.runtime.sendMessage({ action: "PARENTAL_MODE_OFF" });
-      setParentalUI(false);
-      showToast("✓ Parental Mode disabled.");
-    });
+    // Write storage first — background picks it up via onChanged
+    chrome.storage.local.set(
+      { parentalMode: false, parentalWhitelist: [] },
+      () => {
+        if (chrome.runtime.lastError) {
+          showToast("⚠ Could not disable Parental Mode: " + chrome.runtime.lastError.message);
+          return;
+        }
+        // Also send message so background can verify password and clean up temp unlock
+        chrome.runtime.sendMessage(
+          { action: "PARENTAL_MODE_OFF", password: PARENTAL_MODE_PASSWORD },
+          (resp) => {
+            if (chrome.runtime.lastError) {
+              console.warn("[Parental] PARENTAL_MODE_OFF message (non-fatal):", chrome.runtime.lastError.message);
+            }
+          }
+        );
+        setParentalUI(false);
+        showToast("✓ Parental Mode disabled.");
+      }
+    );
   }
 });
 
+// ── Edit Whitelist when Active ────────────────────────────────────────────────
+if (btnEditWhitelist) {
+  btnEditWhitelist.addEventListener("click", async () => {
+    const pwOk = await askPassword(
+      "Manage Whitelist",
+      "Enter Parental PIN to edit allowed websites",
+      "Unlock List"
+    );
+    if (!pwOk) return;
+
+    chrome.storage.local.get(["parentalWhitelist"], async (res) => {
+      const currentList = res.parentalWhitelist || [];
+      const updated = await openUrlModal(currentList);
+      if (updated && updated.length > 0) {
+        chrome.storage.local.set({ parentalWhitelist: updated }, () => {
+          chrome.runtime.sendMessage(
+            { action: "PARENTAL_MODE_ON", whitelist: updated },
+            (resp) => { if (chrome.runtime.lastError) console.warn("[Parental] whitelist update msg:", chrome.runtime.lastError.message); }
+          );
+          showToast("✓ Allowed websites updated.");
+        });
+      }
+    });
+  });
+}
+
+// ── Change PIN Modal ──────────────────────────────────────────────────────────
+if (btnChangePin) {
+  btnChangePin.addEventListener("click", () => {
+    modalOldPin.value = "";
+    modalNewPin.value = "";
+    modalPinError.textContent = "";
+    modalChangePin.classList.remove("hidden");
+    setTimeout(() => modalOldPin.focus(), 80);
+  });
+}
+
+if (modalPinCancel) {
+  modalPinCancel.addEventListener("click", () => {
+    modalChangePin.classList.add("hidden");
+  });
+}
+
+if (modalPinSave) {
+  modalPinSave.addEventListener("click", () => {
+    const oldVal = modalOldPin.value;
+    const newVal = modalNewPin.value.trim();
+
+    if (oldVal !== PARENTAL_MODE_PASSWORD) {
+      modalPinError.textContent = "Current PIN is incorrect.";
+      modalOldPin.classList.add("error");
+      setTimeout(() => modalOldPin.classList.remove("error"), 500);
+      return;
+    }
+    if (!newVal || newVal.length < 4) {
+      modalPinError.textContent = "New PIN must be at least 4 characters.";
+      modalNewPin.classList.add("error");
+      setTimeout(() => modalNewPin.classList.remove("error"), 500);
+      return;
+    }
+
+    chrome.runtime.sendMessage(
+      { action: "SET_PARENTAL_PIN", currentPassword: oldVal, newPassword: newVal },
+      (res) => {
+        if (res?.ok) {
+          PARENTAL_MODE_PASSWORD = newVal;
+          modalChangePin.classList.add("hidden");
+          showToast("✓ Parental PIN updated!");
+        } else {
+          modalPinError.textContent = res?.error || "Failed to update PIN.";
+        }
+      }
+    );
+  });
+}
+
 // ── Restore persisted state on popup open ─────────────────────────────────────
-chrome.storage.local.get(["parentalMode", "parentalWhitelist"], result => {
-  if (result.parentalMode) setParentalUI(true);
+chrome.storage.local.get(["parentalMode", "parentalWhitelist", "parentalPassword"], result => {
+  if (result.parentalPassword) {
+    PARENTAL_MODE_PASSWORD = result.parentalPassword;
+  }
+  if (result.parentalMode) {
+    setParentalUI(true);
+  }
 });
