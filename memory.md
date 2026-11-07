@@ -42,13 +42,13 @@
 
 | Feature | Status | Implementation Details |
 |---|---|---|
-| **Local LLM Engine** | ✅ Complete | Local Ollama abstraction supporting Gemma models with retry, timeout, JSON repair, and LRU cache. |
+| **Local LLM Engine** | ✅ Complete | Local Ollama abstraction (`extension/llm.js`) supporting Gemma models with retry, timeout, JSON repair, and persistent LRU cache. |
+| **Unified Scanner** | ✅ Complete | Auto-detects Job Notices vs News Claims; multi-source retrieval (DDG Lite, Wikipedia API, Google News RSS); 7 Job Legitimacy checks (RDAP domain age, free-mail, shorteners, scam searches, fees); Gemma evidence judging; verifiable citation substrings; real-date time paradox check. |
 | **Trust Aura** | ✅ Complete | Viewport-aware via `IntersectionObserver`, concurrency throttled (2), dedupe cache, graceful grey/neutral fallback when offline. |
-| **Fact Checker** | ✅ Complete | Wikipedia API + DDG Lite retrieval; LLM evidence judging; verifiable citation substrings; real-date time paradox check. |
 | **Privacy Policy Analyzer** | ✅ Complete | 100% offline regex & heuristic keyword scoring + optional local Gemma synthesis. |
 | **Image & Deepfake Detector** | ✅ Complete | Local file/URL heuristics + Gemma multimodal inspection with explicit non-conclusive disclaimers. |
 | **Content Firewall** | ✅ Complete | DeclarativeNetRequest network rules + DOM overlay; truthful non-DNS claims. |
-| **MV3 Service Worker Hardening** | ✅ Complete | Synchronously registered listeners, persistent storage rehydration on SW wake-up, guaranteed `sendResponse`. |
+| **MV3 Service Worker Hardening** | ✅ Complete | Synchronously registered listeners, persistent storage rehydration on SW wake-up, keep-alive ping during fetch, session storage survivability, guaranteed `sendResponse`. |
 
 ---
 
@@ -56,17 +56,30 @@
 
 1. **In-Browser Fallback:** `offscreen-fallback.js` is currently a clean stub. If full zero-install in-browser LLM is desired in the future, transformers.js ONNX runtime can be mounted in an offscreen document.
 2. **CORS on Ollama:** Ollama requires launching with `OLLAMA_ORIGINS="chrome-extension://*"` to allow requests from the extension background origin. Documented clearly in README and Settings.
+3. **RDAP Rate Limits:** Free RDAP at `https://rdap.org` might occasionally rate-limit under heavy usage; handled gracefully with fallback status `unknown`.
 
 ---
 
 ## 5. Changelog & Modifications Ledger
 
-### [2026-11-07] — Phase 0 to 5 Complete: Full Refactoring & Truthfulness Realized
-- **Zero API Keys & Zero Gemini:** Completely removed `@google/generative-ai`, Gemini API keys, and hardcoded keys across the codebase.
-- **Provider Abstraction:** Implemented `extension/llm/` with Ollama as primary local provider (`gemma3:4b`), persistent LRU caching, JSON extraction, and repair retries.
-- **Fact Checker Fixed:** Swapped hardcoded political regexes for Wikipedia API & DDG Lite retrieval + LLM evidence judging with strict JSON schema. Verified citation substring matching and real-date time paradox logic.
-- **Trust Aura Viewport-Aware:** Added `IntersectionObserver` triggering, concurrency limiter (2), dedupe cache, and neutral grey aura for offline states.
-- **Deepfake Honest Scans:** Shifted claims from "conclusive deepfake detection" to heuristic metadata analysis + indicative local vision model with explicit disclaimers.
-- **MV3 Reliability:** Enforced synchronous listener registrations, persisted service worker state in `chrome.storage.local`, validated message boundaries.
-- **Test Suite:** Built unit test suite with 13 tests running on native Node test runner (`node --test`).
-- **Docs Rewritten:** Rewrote `README.md` to reflect true local AI architecture, explicit Ollama setup for Windows/macOS/Linux, and transparent privacy disclosures.
+### [2026-11-07] — Phase 0 to 8 Complete: Unified Misinformation & Job Legitimacy Scanner
+- **Unified Scanner Core (`extension/scanner/`):**
+  - Built `classifier.js`: Fast rule-based classifier detecting hiring signals (`hiring`, `internship`, `walk-in`, `freshers`, `stipend`, `vacancy`, `recruitment`, `CTC`, `registration fee`) and structured entity extractor for company, roles, locations, contacts, and fees.
+  - Built `text-extractor.js`: Service worker-safe DOM-less HTML stripper and passage ranker capping output to ~3,000 characters of top passages.
+  - Built `retrieval.js`: Keyless multi-source search provider (DuckDuckGo Lite, Wikipedia API, Google News RSS) with domain authority scoring and parallel page fetching (limit 3, 8s timeout).
+  - Built `job-verifier.js`: 7 critical legitimacy checks (Company existence, Careers portal listing, LinkedIn presence, Contact validity [flagging @gmail, bit.ly, WhatsApp-only], Domain age via RDAP [< 6 months], Scam & fraud complaint search, Fee checks) with Pass/Risk/Unverified checklist and actionable advice.
+  - Built `judge.js`: Sends only retrieved passages to local Gemma; strictly drops hallucinated citations (exact substring verification); real-date time paradox check (`new Date()`); evidence-only mode when Ollama is offline.
+  - Built `index.js`: Orchestrator with stage logging and local history persistence (capped at 50, deduplicated).
+- **Dashboard & UI Enhancements (`extension/dashboard.html`, `extension/dashboard.js`, `components/analyze/FactChecker.tsx`):**
+  - Added real-time progress steps (`Classify -> Search -> Read Sources -> Judge`).
+  - Added type badges (`Detected: Job Posting` vs `Detected: News / Claim`).
+  - Rendered 7-item Job Verification Checklist with Pass/Risk/Unverified badges and actionable advice.
+  - Rendered Verbatim Citations with highlighted quotes and source links.
+  - Added Collapsible Advanced Settings for Ollama Model (`gemma3:4b`), Host (`http://localhost:11434`), and local storage persistence.
+  - Expanded input character limits from 200 to 5,000 to accommodate full job descriptions.
+  - Added Raw JSON viewer toggle and explicit privacy/disclaimer notes.
+- **Context Menu & Shortcuts:**
+  - Added context menu `"🛡️ Ambient Shield: Check this text"` and keyboard shortcut `Alt+Shift+C` (`MacCtrl+Shift+C` on macOS).
+  - Passes selected text via `chrome.storage.session` and `chrome.storage.local` with `autorun: true` to prevent URL truncation or leaks.
+- **MV3 Worker Survivability:** Added interval keep-alive during multi-step page fetch and persisted active scan state in `chrome.storage.session`.
+- **Testing:** 21/21 tests passing across 4 test suites (`npm test`). Builds verified passing (`npm run lint`, `npm run build`, `npm run build:ext`).

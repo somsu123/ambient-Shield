@@ -6,6 +6,7 @@ import { callLLM, checkLLMHealth, getLLMConfig } from "./llm/index.js";
 import { PROMPTS } from "./llm/prompts.js";
 import { validateMessage, MESSAGE_ACTIONS } from "./messages.js";
 import { logStage } from "./logger.js";
+import { runUnifiedScan } from "./scanner/index.js";
 import {
   checkTimeParadox,
   filterVerifiableCitations,
@@ -261,15 +262,16 @@ export async function retrieveWebEvidence(query) {
 
 async function handleFactCheck({ text }, sendResponse) {
   try {
-    const claim = (text || "").trim().slice(0, 300);
-    if (claim.length < 15) {
+    const raw = (text || "").trim();
+    if (raw.length < 15) {
       return sendResponse({
         success: true,
         result: {
+          type: "claim",
           verdict: "Couldn't verify",
           riskLevel: "SAFE",
           credibilityScore: 50,
-          explanation: "Claim text is too brief to verify.",
+          explanation: "Text is too brief to verify. Please provide a complete claim, headline, or job posting.",
           redFlags: [],
           whatToCheck: [],
           simpleSummary: "Please provide a more complete claim.",
@@ -277,90 +279,44 @@ async function handleFactCheck({ text }, sendResponse) {
       });
     }
 
-    logStage("FACT_CHECK", `Starting fact check: "${claim.slice(0, 60)}"`);
+    logStage("FACT_CHECK", `Starting unified scan: "${raw.slice(0, 60)}"`);
 
-    // 1. Time paradox check with real date
-    const paradox = checkTimeParadox(claim, new Date());
-    if (paradox.isParadox) {
-      logStage("FACT_CHECK", "Time paradox detected");
-      return sendResponse({
-        success: true,
-        result: {
-          verdict: "Couldn't verify",
-          riskLevel: "CAUTION",
-          credibilityScore: 50,
-          explanation: paradox.reasoning,
-          redFlags: ["Claim asserts future event has already occurred."],
-          whatToCheck: [`Current reference year: ${new Date().getFullYear()}`],
-          simpleSummary: "Future events cannot be verified yet.",
-        },
-      });
+    // Keep service worker alive during multi-step retrieval & judging
+    const keepAliveInterval = setInterval(() => {
+      try {
+        if (chrome.runtime?.getPlatformInfo) {
+          chrome.runtime.getPlatformInfo(() => {});
+        }
+      } catch (_) {}
+    }, 4000);
+
+    // Persist active scan in session storage for MV3 survivability
+    const activeScanState = { text: raw.slice(0, 5000), startedAt: Date.now() };
+    if (chrome.storage?.session) {
+      chrome.storage.session.set({ activeScan: activeScanState }).catch(() => {});
     }
 
-    // 2. Evidence retrieval
-    const evidence = await retrieveWebEvidence(claim);
-
-    // 3. LLM Evidence Judging
-    const currentYear = new Date().getFullYear();
-    const prompt = PROMPTS.FACT_CHECK.buildPrompt({ claim, evidence, currentYear });
-
-    const llmResult = await callLLM({
-      task: "FACT_CHECK",
-      system: PROMPTS.FACT_CHECK.system,
-      prompt,
-      schema: PROMPTS.FACT_CHECK.schema,
+    const scanOutput = await runUnifiedScan(raw, (progress) => {
+      logStage("SCAN_PROGRESS", `${progress.step}: ${progress.message}`);
     });
 
-    if (!llmResult.success) {
-      logStage("FACT_CHECK", "LLM reasoning failed, fallback to retrieval summary", llmResult.error);
-      return sendResponse({
-        success: true,
-        result: {
-          verdict: "Couldn't verify",
-          riskLevel: "CAUTION",
-          credibilityScore: 50,
-          explanation: evidence.length > 0
-            ? `Found ${evidence.length} web sources, but local LLM could not complete synthesis.`
-            : "No verified web sources found to evaluate this claim.",
-          redFlags: [],
-          whatToCheck: evidence.map(e => `${e.source}: ${e.url}`),
-          simpleSummary: "Evaluation inconclusive.",
-        },
-      });
+    clearInterval(keepAliveInterval);
+    if (chrome.storage?.session) {
+      chrome.storage.session.remove("activeScan").catch(() => {});
     }
 
-    const { verdict, confidence, reasoning, citations } = llmResult.data;
-
-    // 4. Verification of citation quotes against retrieved evidence
-    const verifiedCitations = filterVerifiableCitations(citations, evidence);
-
-    // 5. Map to UI schema with truthful wording
-    let mappedVerdict = "Couldn't verify";
-    let riskLevel = "CAUTION";
-    let credibilityScore = 50;
-
-    if (verdict === "supported") {
-      mappedVerdict = "Supported by sources";
-      riskLevel = "SAFE";
-      credibilityScore = Math.max(70, Math.round(confidence * 100));
-    } else if (verdict === "contradicted") {
-      mappedVerdict = "Contradicted by sources";
-      riskLevel = "DANGER";
-      credibilityScore = Math.min(25, Math.round((1 - confidence) * 100));
+    if (!scanOutput.success) {
+      logStage("FACT_CHECK", "Unified scan returned error", scanOutput.error);
+      return sendResponse({
+        success: false,
+        error: scanOutput.error || "Fact check evaluation failed.",
+      });
     }
 
     sendResponse({
       success: true,
-      cached: llmResult.cached,
-      result: {
-        verdict: mappedVerdict,
-        riskLevel,
-        credibilityScore,
-        explanation: reasoning,
-        redFlags: mappedVerdict === "Contradicted by sources" ? ["Contradicted by retrieved evidence."] : [],
-        whatToCheck: verifiedCitations.map(c => `Quote: "${c.quote}" — Source: ${c.url}`),
-        simpleSummary: `${mappedVerdict}. Confidence: ${Math.round(confidence * 100)}%`,
-      },
+      cached: scanOutput.result?.cached,
+      result: scanOutput.result,
     });
   } catch (err) {
     logStage("ERROR", "handleFactCheck exception", err);
@@ -710,7 +666,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: "ambient-policy",    title: "🛡️ Analyze Privacy Policy", contexts: ["page"] });
-    chrome.contextMenus.create({ id: "ambient-factcheck", title: "🛡️ Fact-check Selection",    contexts: ["selection"] });
+    chrome.contextMenus.create({ id: "ambient-factcheck", title: "🛡️ Ambient Shield: Check this text", contexts: ["selection"] });
     chrome.contextMenus.create({ id: "ambient-image",     title: "🛡️ Scan Image",              contexts: ["image"] });
   });
 });
@@ -741,10 +697,19 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  if (info.menuItemId === "ambient-factcheck") {
-    const selected = (info.selectionText || "").slice(0, 500);
-    await chrome.storage.local.set({ pendingFactCheck: { text: selected, ts: Date.now() } });
-    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") + "?tab=factcheck" });
+  if (info.menuItemId === "ambient-factcheck" || info.menuItemId === "ambient-check") {
+    const selected = (info.selectionText || "").slice(0, 5000);
+    const pendingData = {
+      text: selected,
+      sourceUrl: tab?.url || "",
+      ts: Date.now(),
+      autorun: true,
+    };
+    if (chrome.storage?.session) {
+      await chrome.storage.session.set({ pendingFactCheck: pendingData }).catch(() => {});
+    }
+    await chrome.storage.local.set({ pendingFactCheck: pendingData });
+    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") + "?tab=factcheck&autorun=1" });
     return;
   }
 
@@ -755,4 +720,33 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 
   chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+});
+
+// Keyboard Shortcut: Alt+Shift+C (or Cmd+Shift+C)
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "ambient-check") {
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (activeTab?.id) {
+        const [{ result: selected }] = await chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          func: () => window.getSelection().toString().trim(),
+        });
+        const text = (selected || "").slice(0, 5000);
+        if (text) {
+          const pendingData = {
+            text,
+            sourceUrl: activeTab.url || "",
+            ts: Date.now(),
+            autorun: true,
+          };
+          if (chrome.storage?.session) {
+            await chrome.storage.session.set({ pendingFactCheck: pendingData }).catch(() => {});
+          }
+          await chrome.storage.local.set({ pendingFactCheck: pendingData });
+          chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") + "?tab=factcheck&autorun=1" });
+        }
+      }
+    } catch (_) {}
+  }
 });

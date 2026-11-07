@@ -237,6 +237,44 @@
       .hero { padding: 40px 16px 32px; }
       .tool-card { padding: 20px; }
     }
+
+    /* ── Fact Checker & Job Verifier Enhancements ── */
+    .type-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 100px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    }
+    .type-pill.job { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .type-pill.claim { background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+
+    .step-badge {
+      font-size: 11px; padding: 3px 10px; border-radius: 6px;
+      background: var(--bg2); color: var(--text3); border: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+    .step-badge.active { background: rgba(91,156,246,0.2); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+    .step-badge.done { background: rgba(62,207,142,0.15); color: var(--safe); border-color: rgba(62,207,142,0.3); }
+
+    .checklist-table { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+    .checklist-row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      padding: 10px 14px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border);
+    }
+    .check-status-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 12px; white-space: nowrap; flex-shrink: 0;
+    }
+    .check-status-badge.pass { background: rgba(62,207,142,0.15); color: var(--safe); border: 1px solid rgba(62,207,142,0.3); }
+    .check-status-badge.fail { background: rgba(255,77,109,0.15); color: var(--danger); border: 1px solid rgba(255,77,109,0.3); }
+    .check-status-badge.unknown { background: rgba(180,210,255,0.1); color: var(--text3); border: 1px solid var(--border); }
+
+    .quote-box {
+      margin-top: 6px; padding: 6px 10px; border-left: 3px solid var(--accent);
+      background: rgba(91,156,246,0.06); font-size: 12px; color: var(--text2); font-style: italic; border-radius: 0 4px 4px 0;
+    }
+    .highlight-quote {
+      background: rgba(245,166,35,0.25); color: #fff; padding: 0 2px; border-radius: 2px; font-style: normal;
+    }
   </style>
 </head>
 <body>
@@ -263,7 +301,7 @@
   <div class="hero">
     <div class="hero-badge">🛡️ Your Quiet Digital Protector</div>
     <h1>Ambient <span>Shield</span></h1>
-    <p>Analyze privacy policies, detect misinformation, and spot deepfakes — all powered by Gemini AI, all running locally in your browser.</p>
+    <p>Analyze privacy policies, detect misinformation, and spot job scams — powered by local Gemma models running on-device with zero cloud AI API keys.</p>
   </div>
 
   <!-- Tool tabs -->
@@ -317,20 +355,66 @@
       </div>
     </div>
 
-    <!-- ── FACT CHECKER ── -->
+    <!-- ── FACT CHECKER & JOB VERIFIER ── -->
     <div class="panel" id="panel-factcheck">
       <div class="tool-card">
         <div class="tool-header">
-          <span class="tool-label" style="color:var(--safe)">Fact Checker</span>
-          <div class="tool-title">Misinformation Scanner</div>
-          <p class="tool-desc">Paste a headline, social media post, or article claim. Ambient Shield will assess its credibility and flag potential misinformation patterns.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+            <span class="tool-label" style="color:var(--safe)">Unified Scanner</span>
+            <span id="factcheck-type-badge" class="type-pill" style="display:none">Detected: Auto-detecting...</span>
+          </div>
+          <div class="tool-title">Misinformation &amp; Job Legitimacy Scanner</div>
+          <p class="tool-desc">Paste a news claim, social media headline, or a hiring/internship notice. Ambient Shield auto-detects the content type, searches live web evidence, and evaluates authenticity with 100% local Gemma inference.</p>
         </div>
 
-        <textarea id="factcheck-input" placeholder="Paste the text, headline, or claim you want to verify…" rows="6"></textarea>
+        <textarea id="factcheck-input" placeholder="Paste claim, social media post, or job notice (e.g. 'HIRING FRESHERS | HETERO | SANATH NAGAR')..." rows="6"></textarea>
 
-        <button class="btn btn-primary" id="btn-factcheck" style="background:linear-gradient(135deg,#0e7a4a,#3ecf8e);box-shadow:0 2px 18px rgba(62,207,142,0.3)">
-          ✅ Check Facts
-        </button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="btn-factcheck" style="background:linear-gradient(135deg,#0e7a4a,#3ecf8e);box-shadow:0 2px 18px rgba(62,207,142,0.3)">
+            🔍 Scan &amp; Verify
+          </button>
+          <button type="button" id="btn-factcheck-advanced-toggle" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline">
+            ⚙️ Advanced Settings
+          </button>
+        </div>
+
+        <!-- Collapsible Advanced Area -->
+        <div id="factcheck-advanced-area" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px">
+          <div style="font-weight:600;margin-bottom:8px;color:var(--text)">Local Ollama Configuration</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div>
+              <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:4px">Ollama Model</label>
+              <input type="text" id="fc-setting-model" value="gemma3:4b" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:4px">Ollama Host</label>
+              <input type="text" id="fc-setting-host" value="http://localhost:11434" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text3)">
+            Settings are saved locally in <code>chrome.storage.local</code>. Ensure Ollama is running with CORS enabled.
+          </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="factcheck-progress-bar" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(91,156,246,0.06);border:1px solid rgba(91,156,246,0.2);border-radius:10px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div class="spinner" style="width:16px;height:16px"></div>
+            <div id="factcheck-progress-msg" style="font-size:13px;font-weight:500;color:var(--accent)">Analyzing content...</div>
+          </div>
+          <div class="stepper-dots" style="display:flex;gap:6px;flex-wrap:wrap">
+            <span id="step-classify" class="step-badge">1. Classify</span>
+            <span id="step-search" class="step-badge">2. Search</span>
+            <span id="step-read" class="step-badge">3. Read Sources</span>
+            <span id="step-judge" class="step-badge">4. Judge</span>
+          </div>
+        </div>
+
+        <!-- Privacy & Automated Check Disclosures -->
+        <div style="margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5">
+          🔒 <strong>What leaves your device:</strong> All analysis runs locally via Gemma. Web searches leave your device via DuckDuckGo / Wikipedia / Google News; no personal data or API keys are sent.<br/>
+          ⚠️ <em>Automated check, not legal or hiring advice. Verify directly with the organisation.</em>
+        </div>
 
         <div class="result-area" id="factcheck-result"></div>
       </div>
@@ -376,15 +460,15 @@
       <div class="tool-card">
         <div class="tool-header">
           <span class="tool-label" style="color:var(--text2)">Preferences</span>
-          <div class="tool-title">API Configuration</div>
-          <p class="tool-desc">Update your Gemini API key to restore service. You can get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);text-decoration:none">Google AI Studio</a>.</p>
+          <div class="tool-title">Local Model Configuration</div>
+          <p class="tool-desc">Ambient Shield uses local inference via Ollama. No API keys or cloud accounts needed. Configure your local model name and Ollama connection below.</p>
         </div>
         
         <div class="input-row">
-          <input type="password" id="api-key-input" placeholder="Paste new Gemini API Key here (AIzaSy...)" />
-          <button class="btn btn-secondary" id="btn-save-key">Save Key</button>
+          <input type="text" id="api-key-input" placeholder="Ollama Model Name (e.g. gemma3:4b, gemma2:2b)" />
+          <button class="btn btn-secondary" id="btn-save-key">Save Model</button>
         </div>
-        <div id="settings-result" style="font-size:13px;color:var(--safe);display:none;margin-top:4px">✅ API Key saved successfully!</div>
+        <div id="settings-result" style="font-size:13px;color:var(--safe);display:none;margin-top:4px">✅ Model configuration saved successfully!</div>
       </div>
     </div>
 
@@ -395,7 +479,7 @@
         <div class="legend-item"><div class="legend-dot" style="background:var(--caution)"></div>Caution</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>Danger</div>
       </div>
-      <span style="font-size:12px;color:var(--text3)">Powered by Gemini AI • Privacy-first</span>
+      <span style="font-size:12px;color:var(--text3)">Powered by Local Gemma AI • 100% Private</span>
     </div>
   </div>
 

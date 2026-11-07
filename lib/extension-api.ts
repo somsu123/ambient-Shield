@@ -35,8 +35,15 @@ async function webFallback(payload: MessagePayload): Promise<ScanResponse> {
     }
 
     if (payload.action === "SCAN_FACT") {
-      const system = `You are a forensic fact-checking engine. Reply ONLY JSON: {"verdict":"supported"|"contradicted"|"insufficient","confidence":number,"reasoning":"1 sentence","citations":[{"url":string,"quote":string}]}`;
-      const result = await callLocalLLM(system, `Claim to evaluate: "${payload.text}"`, { host, model });
+      const text = (payload.text as string) || "";
+      const isJob = /hiring|internship|walk-?in|freshers?|apply|stipend|vacancy|recruitment/i.test(text);
+      if (isJob) {
+        const system = `You are a job legitimacy analyst running locally. Analyze the job posting text for legitimacy and scam patterns (registration fees, free-mail contacts, vague requirements). Reply ONLY valid JSON with keys: {"type":"job","verdict":"Likely legitimate"|"Unverified"|"High scam risk","riskLevel":"SAFE"|"CAUTION"|"DANGER","credibilityScore":number,"explanation":"1 sentence","redFlags":string[],"advice":string[],"checklist":{"companyWebsite":{"label":"Company Website","status":"pass"|"fail"|"unknown","detail":"summary"},"careersListing":{"label":"Careers Portal","status":"pass"|"fail"|"unknown","detail":"summary"},"contactValidity":{"label":"Contact Validity","status":"pass"|"fail"|"unknown","detail":"summary"},"feeCheck":{"label":"Fees & Deposits","status":"pass"|"fail"|"unknown","detail":"summary"}}}`;
+        const result = await callLocalLLM(system, `Analyze Job Notice:\n${text}`, { host, model });
+        return { success: true, result, cached: false, remainingCalls: 999 };
+      }
+      const system = `You are a forensic fact-checking engine. Reply ONLY JSON: {"type":"claim","verdict":"supported"|"contradicted"|"insufficient","confidence":number,"reasoning":"1 sentence","citations":[{"url":string,"quote":string}]}`;
+      const result = await callLocalLLM(system, `Claim to evaluate: "${text}"`, { host, model });
       return { success: true, result, cached: false, remainingCalls: 999 };
     }
 

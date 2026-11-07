@@ -24,14 +24,16 @@ interface FactCheckerProps {
 // ── Verdict config ────────────────────────────────────────────────────────────
 interface VerdictConfig { icon: string; label: string; color: string; bg: string; border: string; }
 
-const VERDICT_MAP: Record<FactCheckVerdict, VerdictConfig> = {
-  TRUE:        { icon: "✅", label: "True",        color: "var(--safe)",    bg: "rgba(62,207,142,0.1)",   border: "rgba(62,207,142,0.3)"  },
-  LIKELY_TRUE: { icon: "✅", label: "Likely True",  color: "var(--safe)",    bg: "rgba(62,207,142,0.08)",  border: "rgba(62,207,142,0.25)" },
-  UNVERIFIED:  { icon: "🔍", label: "Unverified",   color: "var(--accent)",  bg: "rgba(91,156,246,0.1)",   border: "rgba(91,156,246,0.3)"  },
-  MISLEADING:  { icon: "⚠️", label: "Misleading",   color: "var(--caution)", bg: "rgba(245,166,35,0.1)",  border: "rgba(245,166,35,0.3)"  },
-  FALSE:       { icon: "🚨", label: "False",         color: "var(--danger)",  bg: "rgba(255,77,109,0.1)",  border: "rgba(255,77,109,0.3)"  },
-  SATIRE:      { icon: "😄", label: "Satire",        color: "#a78bfa",        bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)" },
-};
+function getVerdictConfig(verdictStr: string): VerdictConfig {
+  const v = (verdictStr || "").toUpperCase();
+  if (v.includes("TRUE") || v.includes("SUPPORTED") || v.includes("LEGITIMATE")) {
+    return { icon: "✅", label: verdictStr || "Supported by sources", color: "var(--safe)", bg: "rgba(62,207,142,0.1)", border: "rgba(62,207,142,0.3)" };
+  }
+  if (v.includes("FALSE") || v.includes("CONTRADICTED") || v.includes("SCAM")) {
+    return { icon: "🚨", label: verdictStr || "Contradicted by sources", color: "var(--danger)", bg: "rgba(255,77,109,0.1)", border: "rgba(255,77,109,0.3)" };
+  }
+  return { icon: "🔍", label: verdictStr || "Couldn't verify", color: "var(--caution)", bg: "rgba(245,166,35,0.1)", border: "rgba(245,166,35,0.3)" };
+}
 
 // ── Component state ───────────────────────────────────────────────────────────
 interface State {
@@ -125,26 +127,26 @@ export default function FactChecker({ onRemainingUpdate, restoreRef }: FactCheck
   }, [state.result]);
 
   const charCount   = state.text.length;
-  const isOverLimit = charCount > 200;
+  const isOverLimit = charCount > 5000;
   const canSubmit   = !state.loading && !isOverLimit && state.text.trim().length > 0;
-  const verdictCfg  = state.result ? VERDICT_MAP[state.result.verdict] : null;
+  const verdictCfg  = state.result ? getVerdictConfig(String(state.result.verdict)) : null;
 
   return (
     <div className="space-y-6">
       {/* ── Input ─────────────────────────────────────────────────────────── */}
       <div className="space-y-3">
         <div className="relative">
-          <Textarea id="factcheck-text-input" className="min-h-[140px] pr-4"
-            placeholder={"Enter a claim to fact-check…\n\nExamples:\n\"The Great Wall of China is visible from space.\"\n\"Vaccines contain microchips.\""}
-            value={state.text} disabled={state.loading} maxLength={220}
+          <Textarea id="factcheck-text-input" className="min-h-[140px] pr-4 font-normal"
+            placeholder={"Enter a claim or paste a hiring post to verify…\n\nExamples:\n\"HIRING FRESHERS | HETERO | SANATH NAGAR, HYDERABAD\"\n\"The Great Wall of China is visible from space.\""}
+            value={state.text} disabled={state.loading} maxLength={5200}
             onChange={(e) => setState((s) => ({ ...s, text: e.target.value, error: null }))} />
           <span className="absolute bottom-3 right-3 text-[10px] font-mono"
             style={{ color: isOverLimit ? "var(--danger)" : "var(--text3)" }}>
-            {charCount}/200
+            {charCount}/5000
           </span>
         </div>
         <Button id="factcheck-submit-btn" onClick={handleCheck} disabled={!canSubmit} className="w-full sm:w-auto gap-2">
-          {state.loading ? <><Loader2 size={14} className="animate-spin" />Checking…</> : <><Search size={14} />Check Facts</>}
+          {state.loading ? <><Loader2 size={14} className="animate-spin" />Scanning…</> : <><Search size={14} />Scan &amp; Verify</>}
         </Button>
       </div>
 
@@ -236,8 +238,59 @@ export default function FactChecker({ onRemainingUpdate, restoreRef }: FactCheck
                   </div>
                 )}
 
+                {/* Job Checklist (if job) */}
+                {Boolean((state.result as any).checklist) && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: "var(--accent)" }}>📋 Verification Checklist (7 Critical Checks)</p>
+                    <div className="space-y-2">
+                      {Object.values((state.result as any).checklist as Record<string, { label: string; status: string; detail: string; url?: string }>).map((c, i) => (
+                        <div key={i} className="flex items-start justify-between gap-3 p-3 rounded-lg border text-xs" style={{ background: "var(--bg3)", borderColor: "var(--border)" }}>
+                          <div>
+                            <p className="font-semibold" style={{ color: "var(--text)" }}>{c.label}</p>
+                            <p style={{ color: "var(--text2)" }}>{c.detail}</p>
+                            {c.url && <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[11px] hover:underline" style={{ color: "var(--accent)" }}>View link ↗</a>}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${c.status === "pass" ? "text-emerald-400 bg-emerald-950/40 border border-emerald-500/30" : c.status === "fail" ? "text-rose-400 bg-rose-950/40 border border-rose-500/30" : "text-slate-400 bg-slate-800/40 border border-slate-700/30"}`}>
+                            {c.status === "pass" ? "✓ Pass" : c.status === "fail" ? "✕ Risk" : "? Unverified"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Job Actionable Advice */}
+                {Boolean((state.result as any).advice && (state.result as any).advice.length > 0) && (
+                  <div className="rounded-xl px-5 py-4 border text-xs" style={{ background: "rgba(91,156,246,0.06)", borderColor: "rgba(91,156,246,0.2)" }}>
+                    <p className="text-[10px] uppercase tracking-widest font-semibold mb-2" style={{ color: "var(--accent)" }}>🛡️ Recommended Next Steps</p>
+                    <ul className="list-disc pl-4 space-y-1" style={{ color: "var(--text2)" }}>
+                      {((state.result as any).advice as string[]).map((tip, i) => (
+                        <li key={i}>{tip}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Verified Citations (if claim) */}
+                {Boolean((state.result as any).citations && (state.result as any).citations.length > 0) && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: "var(--accent)" }}>🔍 Verified Citations (Exact Substrings)</p>
+                    <div className="space-y-2">
+                      {((state.result as any).citations as Array<{ url: string; quote: string; source?: string }>).map((c, i) => (
+                        <div key={i} className="p-3 rounded-lg border text-xs" style={{ background: "var(--bg3)", borderColor: "var(--border)" }}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold" style={{ color: "var(--accent)" }}>{c.source || "Web"}</span>
+                            <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[11px] hover:underline" style={{ color: "var(--accent)" }}>Source Link ↗</a>
+                          </div>
+                          <p className="italic border-l-2 pl-2" style={{ borderColor: "var(--accent)", color: "var(--text2)" }}>&ldquo;{c.quote}&rdquo;</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* What to verify */}
-                {state.result.whatToCheck.length > 0 && (
+                {state.result.whatToCheck && state.result.whatToCheck.length > 0 && (
                   <div>
                     <p className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: "var(--safe)" }}>✓ What to Verify</p>
                     <ul className="space-y-2">

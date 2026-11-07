@@ -1,1 +1,1 @@
-﻿self.__next_f.push([1,"1:HL[\"./next_assets/static/css/58e1a008a43f1b15.css\",\"style\"]\n"])
+﻿self.__next_f.push([1,"1:HL[\"./next_assets/static/css/45a0611b9136c1c3.css\",\"style\"]\n"])

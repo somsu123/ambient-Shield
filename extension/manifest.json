@@ -63,6 +63,15 @@
                                         "128":  "icon128.svg"
                                     }
                },
+    "commands":  {
+                     "ambient-check":  {
+                                           "suggested_key":  {
+                                                                 "default":  "Alt+Shift+C",
+                                                                 "mac":  "MacCtrl+Shift+C"
+                                                             },
+                                           "description":  "Check selected text with Ambient Shield Scanner"
+                                       }
+                 },
     "icons":  {
                   "16":  "icon16.svg",
                   "48":  "icon48.svg",
@@ -78,6 +87,7 @@
                                                            "settings/index.html",
                                                            "next_assets/*",
                                                            "llm/*",
+                                                           "scanner/*",
                                                            "*.js",
                                                            "*.css",
                                                            "*.svg",

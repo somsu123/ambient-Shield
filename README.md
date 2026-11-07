@@ -48,15 +48,39 @@ Every day, internet users encounter:
 
 ---
 
-### 🔍 Fact Checker — Retrieval + Local LLM Evidence Judge
-- **Autonomous Retrieval:** Queries the public Wikipedia API and DuckDuckGo Lite to gather real-time source evidence.
-- **Strict Evidence-Based Reasoning:** Passes retrieved passages to your local Gemma model with instructions to judge **only** the evidence provided.
-- **Calibrated, Truthful Verdicts:**
-  - `Supported by sources` (verifiable citations found)
-  - `Contradicted by sources` (evidence directly disproves claim)
-  - `Couldn't verify` (evidence insufficient or unavailable; never falsely labelled "FALSE" on weak signals)
-- **Verbatim Citation Verification:** Every cited quotation is checked against the retrieved evidence; non-verbatim or hallucinated quotes are discarded.
-- **Real-Date Time Paradox Detection:** Uses dynamic system dates (`new Date()`). Claims asserting past occurrences of future events are classified as *"cannot be verified yet"* (`insufficient`), rather than fabricated claims.
+### 🔍 Unified Misinformation & Job Legitimacy Scanner
+Ambient Shield provides a single unified scanner in the **Fact Checker** tab that automatically detects whether an input is a **General News / Social Media Claim** or a **Job / Internship Notice**, querying live web evidence without cloud API keys:
+
+1. **Auto-Detection & Classification:**
+   - Detects hiring patterns (`hiring`, `internship`, `walk-in`, `freshers`, `apply`, `stipend`, `vacancy`, `recruitment`, `CTC`, `registration fee`) and routes to the Job Verifier.
+   - All other statements route to the Claim & News Fact-Checking engine.
+
+2. **Live Multi-Source Retrieval:**
+   - Queries **DuckDuckGo Lite** (HTML, keyless), **Wikipedia MediaWiki API**, and **Google News RSS**.
+   - Truncates passages to ~3,000 characters of top relevant text per page using a service-worker-safe passage extractor.
+   - Authority scoring: prioritizes official company domains, accredited fact-checkers (Snopes, Reuters, AP), and government/reference sources; downranks forums and aggregators.
+
+3. **Job & Hiring Post Legitimacy Checks (7 Critical Checks):**
+   - 🏢 **Company Existence:** Finds the official corporate website and primary domain.
+   - 💼 **Careers Portal Listing:** Checks for matching official careers listings or active vacancies.
+   - 🔗 **LinkedIn / Social Presence:** Verifies active corporate profiles.
+   - ✉️ **Contact Validity (Critical Scam Signal):** Flags free-mail addresses (`@gmail.com`, `@yahoo`, `@outlook`), URL shorteners (`bit.ly`, `tinyurl`), WhatsApp-only contact info, or raw Google Forms.
+   - 🌐 **Domain Age / RDAP:** Queries open RDAP (`https://rdap.org/domain/<domain>`) and flags domains created less than 180 days ago (< 6 months).
+   - 🚨 **Scam & Fraud Reports:** Searches live complaint boards and LinkedIn warnings for scam reports.
+   - 💵 **Fees & Deposits:** Flags registration fees, security deposits, or direct placement guarantees.
+   - **Job Verdicts:** `Likely legitimate`, `Unverified`, or `High scam risk`, paired with a verification checklist and actionable advice.
+
+4. **Claim Fact-Checking & Local Gemma Judging:**
+   - **Strict Evidence-Based Reasoning:** Passes only retrieved passages to local Gemma (`gemma3:4b`). If evidence is insufficient, Gemma is instructed to answer `insufficient`.
+   - **Truthful Claim Verdicts:** `Supported by sources`, `Contradicted by sources`, or `Couldn't verify` (with explicit reasons: no reliable sources found, sources disagree, or AI judge offline).
+   - **Verbatim Citation Verification:** Every quotation in citations is checked as an exact literal substring of the fetched text; hallucinated quotes are discarded.
+   - **Real-Date Time Paradox Detection:** Uses dynamic system dates (`new Date()`). Future events cannot be verified yet and are classified as `Couldn't verify`, never labelled "FALSE".
+   - **Evidence-Only Fallback:** If Ollama is offline, the scanner runs multi-source retrieval and heuristic checks, displaying sources and red flags with verdict capped at `Couldn't verify`.
+
+5. **Right-Click & Shortcut Access:**
+   - Select text on any web page > Right-click > **"🛡️ Ambient Shield: Check this text"**.
+   - Keyboard shortcut: <kbd>Alt+Shift+C</kbd> (or <kbd>Cmd+Shift+C</kbd> on macOS).
+   - Opens `dashboard.html?tab=factcheck&autorun=1` with selected text passed safely through `chrome.storage`.
 
 ---
 

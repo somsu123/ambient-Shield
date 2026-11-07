@@ -62,8 +62,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load existing model
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get(['ollamaModel'], (res) => {
-      if (res.ollamaModel) document.getElementById('api-key-input').value = res.ollamaModel;
+    chrome.storage.local.get(['ollamaModel', 'ollamaHost'], (res) => {
+      if (res.ollamaModel) {
+        const apiKeyEl = document.getElementById('api-key-input');
+        if (apiKeyEl) apiKeyEl.value = res.ollamaModel;
+        const fcModelEl = document.getElementById('fc-setting-model');
+        if (fcModelEl) fcModelEl.value = res.ollamaModel;
+      }
+      if (res.ollamaHost) {
+        const fcHostEl = document.getElementById('fc-setting-host');
+        if (fcHostEl) fcHostEl.value = res.ollamaHost;
+      }
+    });
+  }
+
+  // Fact Checker Advanced Settings Toggle & Storage
+  const fcAdvBtn = document.getElementById('btn-factcheck-advanced-toggle');
+  const fcAdvArea = document.getElementById('factcheck-advanced-area');
+  if (fcAdvBtn && fcAdvArea) {
+    fcAdvBtn.addEventListener('click', () => {
+      fcAdvArea.style.display = fcAdvArea.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+
+  const fcModelInput = document.getElementById('fc-setting-model');
+  const fcHostInput = document.getElementById('fc-setting-host');
+  if (fcModelInput) {
+    fcModelInput.addEventListener('change', () => {
+      const val = fcModelInput.value.trim() || 'gemma3:4b';
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ ollamaModel: val });
+      }
+    });
+  }
+  if (fcHostInput) {
+    fcHostInput.addEventListener('change', () => {
+      const val = fcHostInput.value.trim() || 'http://localhost:11434';
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ ollamaHost: val });
+      }
     });
   }
 
@@ -114,11 +151,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      if (stored.pendingFactCheck && (Date.now() - stored.pendingFactCheck.ts) < 30000) {
-        const pending = stored.pendingFactCheck;
+      const handlePendingFC = (pending) => {
+        if (!pending || (Date.now() - pending.ts) > 60000) return;
+        const inputEl = document.getElementById('factcheck-input');
+        if (inputEl) inputEl.value = pending.text || '';
+        const fcTab = document.querySelector('.tab-btn[data-tab="factcheck"]');
+        if (fcTab && !fcTab.classList.contains('active')) fcTab.click();
+        if (urlParams.get('autorun') === '1' || pending.autorun) {
+          setTimeout(runFactCheck, 400);
+        }
+      };
+
+      if (chrome.storage.session) {
+        chrome.storage.session.get(['pendingFactCheck'], (s) => {
+          if (s && s.pendingFactCheck) {
+            chrome.storage.session.remove('pendingFactCheck');
+            handlePendingFC(s.pendingFactCheck);
+          } else if (stored.pendingFactCheck) {
+            chrome.storage.local.remove('pendingFactCheck');
+            handlePendingFC(stored.pendingFactCheck);
+          }
+        });
+      } else if (stored.pendingFactCheck) {
         chrome.storage.local.remove('pendingFactCheck');
-        document.getElementById('factcheck-input').value = pending.text || '';
-        if ((pending.text || '').trim().length > 20) setTimeout(runFactCheck, 400);
+        handlePendingFC(stored.pendingFactCheck);
       }
 
       if (stored.pendingImageScan && (Date.now() - stored.pendingImageScan.ts) < 30000) {
@@ -315,79 +371,213 @@ function renderPolicyResult(data) {
   el.classList.add('show');
 }
 
-// ── Fact Checker ──────────────────────────────────────────────────────────────
+// ── Unified Scanner (Misinformation & Job Legitimacy) ─────────────────────────
+function setScannerStep(activeStepIndex, msg) {
+  const steps = ['step-classify', 'step-search', 'step-read', 'step-judge'];
+  const msgEl = document.getElementById('factcheck-progress-msg');
+  if (msgEl && msg) msgEl.textContent = msg;
+
+  steps.forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('active', 'done');
+    if (idx < activeStepIndex) el.classList.add('done');
+    else if (idx === activeStepIndex) el.classList.add('active');
+  });
+}
+
 function runFactCheck() {
   const text = document.getElementById('factcheck-input').value.trim();
-  if (!text) { showError('factcheck-result', 'Please paste the text or claim you want to verify.'); return; }
+  if (!text) {
+    showError('factcheck-result', 'Please paste the text, claim, or job notice you want to verify.');
+    return;
+  }
 
   const btn = document.getElementById('btn-factcheck');
-  setLoading(btn, 'factcheck-result', true, 'Checking Facts…');
+  const progBar = document.getElementById('factcheck-progress-bar');
+  const typeBadge = document.getElementById('factcheck-type-badge');
+  const resEl = document.getElementById('factcheck-result');
 
-  // The backend uses an offline web scraper now!
+  setLoading(btn, null, true, 'Scanning…');
+  if (progBar) progBar.style.display = 'block';
+  if (typeBadge) typeBadge.style.display = 'none';
+  if (resEl) {
+    resEl.innerHTML = '';
+    resEl.classList.remove('show');
+  }
 
+  setScannerStep(0, 'Classifying content (Job Notice vs News Claim)...');
+
+  // Realistic UI progression simulation while worker performs background fetch & LLM judge
+  const t1 = setTimeout(() => setScannerStep(1, 'Searching live web sources & official directories...'), 600);
+  const t2 = setTimeout(() => setScannerStep(2, 'Reading top passages and verifying citations...'), 2400);
+  const t3 = setTimeout(() => setScannerStep(3, 'Evaluating authenticity with local Gemma...'), 5000);
 
   sendMsg({ action: 'SCAN_FACT', text }, (resp) => {
-    setLoading(btn, null, false, '✅ Check Facts');
-    if (!resp || !resp.success) { showError('factcheck-result', (resp && resp.error) ? resp.error : 'No response from the Fact Check Engine.'); return; }
-    try {
-      const mappedResult = {
-        risk: resp.result.riskLevel,
-        score: resp.result.credibilityScore,
-        summary: resp.result.explanation + ' ' + resp.result.simpleSummary,
-        flags: [...(resp.result.redFlags || [])],
-        sources: resp.result.sources || [],
-        verdict: resp.result.verdict
-      };
-      renderFactcheckResult(mappedResult); 
-    } catch (e) { renderRawResult('factcheck-result', JSON.stringify(resp.result)); }
+    clearTimeout(t1);
+    clearTimeout(t2);
+    clearTimeout(t3);
+    setLoading(btn, null, false, '🔍 Scan & Verify');
+    if (progBar) progBar.style.display = 'none';
+
+    if (!resp || !resp.success) {
+      showError('factcheck-result', (resp && resp.error) ? resp.error : 'No response from the Scanner Engine.');
+      return;
+    }
+
+    renderFactcheckResult(resp.result);
   });
 }
 
 function renderFactcheckResult(data) {
-  const el    = document.getElementById('factcheck-result');
-  const risk  = (data.risk || 'caution').toLowerCase();
-  const score = clamp(data.score, 0, 100);
-  const emoji = { safe: '✅', caution: '⚠️', danger: '❌' }[risk] || '⚠️';
-  const verdictLabel = { safe: 'REAL / VERIFIED', caution: 'UNVERIFIED', danger: 'FALSE / FAKE' }[risk] || 'UNVERIFIED';
-  const credColor = { safe: 'var(--safe)', danger: 'var(--danger)', caution: 'var(--caution)' }[risk] || 'var(--caution)';
+  const el = document.getElementById('factcheck-result');
+  const typeBadge = document.getElementById('factcheck-type-badge');
+  if (!data) return;
 
-  // Build source cards
-  const sourcesHtml = (data.sources || []).filter(s => s.url && !s.url.includes('duckduckgo.com')).map(s => {
-    const badge = s.source === 'Wikipedia' ? '📖 Wikipedia' : s.source === 'FactCheck' ? '🔍 Fact Check' : '🌐 Web';
-    const badgeColor = s.source === 'Wikipedia' ? '#3b82f6' : s.source === 'FactCheck' ? '#8b5cf6' : '#6b7280';
-    const domain = (() => { try { return new URL(s.url).hostname.replace('www.',''); } catch { return s.url; } })();
-    return `<a href="${s.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="background:${badgeColor};color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span>
-        <span style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${domain}</span>
-      </div>
-      <p style="font-size:13px;color:var(--text2);margin:0;line-height:1.5">${esc(s.snippet)}</p>
-    </a>`;
-  }).join('');
+  const isJob = data.type === 'job';
 
-  const redFlagsHtml = (data.flags || []).filter(f => f && !f.startsWith('Source:') && !f.startsWith('Wikipedia:') && !f.startsWith('FactCheck:')).map(f =>
-    `<div class="flag-item danger"><span class="flag-icon">🚩</span><span>${esc(f)}</span></div>`
+  // 1. Update detected type pill
+  if (typeBadge) {
+    typeBadge.style.display = 'inline-flex';
+    if (isJob) {
+      typeBadge.className = 'type-pill job';
+      typeBadge.textContent = 'Detected: Job Posting';
+    } else {
+      typeBadge.className = 'type-pill claim';
+      typeBadge.textContent = 'Detected: News / Social Claim';
+    }
+  }
+
+  const risk = (data.riskLevel || 'caution').toLowerCase();
+  const score = clamp(data.credibilityScore || 50, 0, 100);
+  const emoji = risk === 'safe' ? '✅' : risk === 'danger' ? '🚨' : '🔍';
+  const verdict = data.verdict || (isJob ? 'Unverified' : "Couldn't verify");
+
+  // Format verdict colors & honest badge
+  const credColor = risk === 'safe' ? 'var(--safe)' : risk === 'danger' ? 'var(--danger)' : 'var(--caution)';
+
+  // 2. Build Red Flags
+  const redFlagsHtml = (data.redFlags || []).map((f) =>
+    `<div class="flag"><span class="flag-dot" style="background:var(--danger)"></span><span>${esc(f)}</span></div>`
   ).join('');
+
+  // 3. Build Job-specific sections
+  let jobHtml = '';
+  if (isJob && data.checklist) {
+    const checkRows = Object.values(data.checklist).map((c) => {
+      const statusClass = c.status === 'pass' ? 'pass' : c.status === 'fail' ? 'fail' : 'unknown';
+      const statusIcon = c.status === 'pass' ? '✓ Pass' : c.status === 'fail' ? '✕ Risk' : '? Unverified';
+      return `
+        <div class="checklist-row">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">${esc(c.label)}</div>
+            <div style="font-size:12px;color:var(--text2)">${esc(c.detail)}</div>
+            ${c.url ? `<a href="${c.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;display:inline-block;margin-top:4px">View link ↗</a>` : ''}
+          </div>
+          <span class="check-status-badge ${statusClass}">${statusIcon}</span>
+        </div>`;
+    }).join('');
+
+    const adviceList = (data.advice || []).map((a) =>
+      `<li style="margin-bottom:6px">${esc(a)}</li>`
+    ).join('');
+
+    const entities = data.entities || {};
+    const entityTags = [];
+    if (entities.company) entityTags.push(`<strong>Company:</strong> ${esc(entities.company)}`);
+    if (entities.roles && entities.roles.length) entityTags.push(`<strong>Role:</strong> ${esc(entities.roles.join(', '))}`);
+    if (entities.locations && entities.locations.length) entityTags.push(`<strong>Location:</strong> ${esc(entities.locations.join(', '))}`);
+
+    jobHtml = `
+      <div style="margin-top:16px">
+        ${entityTags.length ? `<div style="margin-bottom:12px;font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:12px">${entityTags.join(' &bull; ')}</div>` : ''}
+        <div class="section-label" style="margin-bottom:8px">📋 Verification Checklist (7 Critical Checks)</div>
+        <div class="checklist-table">${checkRows}</div>
+      </div>
+      ${adviceList ? `
+      <div style="margin-top:16px;padding:12px 14px;background:rgba(91,156,246,0.06);border:1px solid rgba(91,156,246,0.2);border-radius:10px">
+        <div class="section-label" style="margin-bottom:6px;color:var(--accent)">🛡️ Recommended Next Steps</div>
+        <ul style="font-size:13px;color:var(--text2);padding-left:18px;line-height:1.6">${adviceList}</ul>
+      </div>` : ''}`;
+  }
+
+  // 4. Build Claim Evidence & Verified Citations
+  let claimHtml = '';
+  if (!isJob) {
+    const citations = data.citations || [];
+    const sources = data.evidenceSources || [];
+
+    if (citations.length > 0) {
+      const citeCards = citations.map((c) => {
+        const domain = (() => { try { return new URL(c.url).hostname.replace('www.', ''); } catch { return c.url; } })();
+        return `
+          <div style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:700;color:var(--accent)">${esc(c.source || 'Web')} &bull; ${domain}</span>
+              <a href="${c.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent2);text-decoration:none">Source Link ↗</a>
+            </div>
+            <div class="quote-box">"${esc(c.quote)}"</div>
+          </div>`;
+      }).join('');
+      claimHtml += `<div style="margin-top:16px"><div class="section-label" style="margin-bottom:8px">🔍 Verified Citations (Exact Substrings)</div>${citeCards}</div>`;
+    }
+
+    if (sources.length > 0) {
+      const sourceList = sources.slice(0, 4).map((s) => {
+        const domain = (() => { try { return new URL(s.url).hostname.replace('www.', ''); } catch { return s.url; } })();
+        return `
+          <a href="${s.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="background:rgba(91,156,246,0.15);color:var(--accent);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">${esc(s.source || 'Web')}</span>
+              <span style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title || domain)}</span>
+            </div>
+            <p style="font-size:12px;color:var(--text2);margin:0;line-height:1.5">${esc(s.snippet || '')}</p>
+          </a>`;
+      }).join('');
+      claimHtml += `<div style="margin-top:16px"><div class="section-label" style="margin-bottom:8px">🌐 Retrieved Web Context</div>${sourceList}</div>`;
+    }
+  }
+
+  // 5. Offline note if judge was offline
+  const offlineNotice = data.offlineJudge ? `
+    <div style="margin-top:12px;padding:8px 12px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:12px;color:var(--caution)">
+      ⚠️ <strong>AI Judge Offline:</strong> Operating in evidence-only fallback mode. To enable full local judging, run <code>ollama pull gemma3:4b</code> and start Ollama with CORS enabled.
+    </div>` : '';
+
+  // 6. Build Raw JSON Details
+  const rawJson = esc(JSON.stringify(data, null, 2));
 
   el.innerHTML = `
     <div class="result-card">
       <div class="risk-header">
         <div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Verdict</div>
-          <span class="risk-badge ${risk}">${emoji} ${verdictLabel}</span>
+          <span class="risk-badge ${risk}">${emoji} ${esc(verdict)}</span>
         </div>
         <div style="text-align:right">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Confidence</div>
-          <span style="font-size:14px;font-weight:700;color:${credColor}">${score}%</span>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Confidence / Credibility</div>
+          <span style="font-size:16px;font-weight:700;color:${credColor}">${score}%</span>
         </div>
       </div>
-      <div class="risk-bar-wrap"><div class="risk-bar ${risk}" style="width:${score}%"></div></div>
-      <div class="divider"></div>
-      ${data.summary ? `<p class="result-summary">${esc(data.summary)}</p>` : ''}
-      ${redFlagsHtml ? `<div style="margin-bottom:14px"><div class="section-label" style="margin-bottom:8px">🚩 Warning Signs</div><div class="flags">${redFlagsHtml}</div></div>` : ''}
-      ${sourcesHtml ? `<div><div class="section-label" style="margin-bottom:10px">🔗 Sources Found on the Web</div>${sourcesHtml}</div>` : 
-        `<div style="padding:12px;background:var(--surface2);border-radius:10px;color:var(--text3);font-size:13px">⚠️ No direct web sources found. Try searching manually for more context.</div>`}
+
+      <div class="risk-bar-wrap" style="margin:10px 0 14px"><div class="risk-bar ${risk}" style="width:${score}%"></div></div>
+
+      <div class="verdict-box">
+        <strong>Summary:</strong> ${esc(data.explanation || data.simpleSummary || 'Evaluation completed.')}
+      </div>
+
+      ${offlineNotice}
+      ${redFlagsHtml ? `<div style="margin-top:14px"><div class="section-label" style="margin-bottom:6px;color:var(--danger)">🚩 Red Flags &amp; Risk Indicators</div><div class="flags">${redFlagsHtml}</div></div>` : ''}
+      ${jobHtml}
+      ${claimHtml}
+
+      <div class="divider" style="margin:18px 0 12px"></div>
+      <details style="font-size:12px;color:var(--text3);cursor:pointer">
+        <summary style="outline:none;user-select:none;color:var(--accent)">🔍 View Raw JSON Output</summary>
+        <pre style="margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow-x:auto;font-size:11px;color:#a5c8ff;font-family:monospace">${rawJson}</pre>
+      </details>
     </div>`;
+
   el.classList.add('show');
 }
 
@@ -685,15 +875,7 @@ function setLoading(btn, resultId, isLoading, label) {
 
 function showError(resultId, msg) {
   const el = document.getElementById(resultId);
-  
-  let displayMsg = esc(msg);
-  // Specifically intercept the 429 Quota error to explain the Google AI region issue
-  if (msg && msg.includes("429") && msg.includes("quota")) {
-    displayMsg = `<b>API Quota Error:</b> Your Gemini API key was rejected. <br><br>
-    <b>Why?</b> If you just created a new free key, Google AI Studio restricts the "Free Tier" in certain regions (like Europe/UK) unless you add a billing card. <br><br>
-    <i>Solution:</i> You must either use a key from a supported free-tier region, or enable billing on your Google Cloud project.`;
-  }
-
+  const displayMsg = esc(msg);
   el.innerHTML = `<div class="error-card">⚠️ <span>${displayMsg}</span></div>`;
   el.classList.add('show');
 }
