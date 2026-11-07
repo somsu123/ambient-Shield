@@ -372,16 +372,16 @@ function openUrlModal(existing = []) {
 function addUrl() {
   let val = urlInput.value.trim();
   if (!val) return;
+  // Auto-prepend https:// if no protocol given (so users can type "google.com")
   if (!/^https?:\/\//i.test(val)) {
-    urlError.textContent = "URL must start with http:// or https://";
-    urlInput.focus(); return;
+    val = "https://" + val;
   }
   try { new URL(val); } catch {
-    urlError.textContent = "Invalid URL. Example: https://example.com";
+    urlError.textContent = "Invalid URL — try: google.com or https://example.com";
     urlInput.focus(); return;
   }
   if (pendingWhitelist.includes(val)) {
-    urlError.textContent = "This URL is already in the list."; return;
+    urlError.textContent = "Already in list."; return;
   }
   pendingWhitelist.push(val);
   renderChips(pendingWhitelist);
