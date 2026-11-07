@@ -63,6 +63,11 @@
 ## 5. Changelog & Modifications Ledger
 
 ### [2026-11-07] — Phase 0 to 8 Complete: Unified Misinformation & Job Legitimacy Scanner
+- **DDG Lite HTML & RDAP Fixes:**
+  - Resolved DuckDuckGo Lite attribute order regex: updated to match `class='result-link'` and direct `href` regardless of attribute order (`rel`, `class`, `href`), fixing 0-hit issue on company website, careers, and LinkedIn searches.
+  - Added browser `User-Agent` header to RDAP queries to prevent HTTP 403 Forbidden on `rdap.org`, and added Verisign direct registry fallback for `.com` and `.net` domains.
+  - Initialized `officialDomain` from recruiter corporate email domains (e.g. `hetero.com` from `hemanth.v@hetero.com`).
+  - Refined role extraction in `classifier.js` to prioritize known concise roles (`Production & Packing`, `Warehouse`) over multiline bulleted blocks.
 - **Unified Scanner Core (`extension/scanner/`):**
   - Built `classifier.js`: Fast rule-based classifier detecting hiring signals (`hiring`, `internship`, `walk-in`, `freshers`, `stipend`, `vacancy`, `recruitment`, `CTC`, `registration fee`) and structured entity extractor for company, roles, locations, contacts, and fees.
   - Built `text-extractor.js`: Service worker-safe DOM-less HTML stripper and passage ranker capping output to ~3,000 characters of top passages.
