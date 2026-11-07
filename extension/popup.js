@@ -227,15 +227,19 @@ function checkEngineStatus(modelName) {
   try {
     chrome.runtime.sendMessage({ action: "CHECK_LLM_HEALTH" }, (resp) => {
       if (resp && resp.ready) {
-        updateKeyStatus(true, `✓ Ready (${modelName || "gemma3:4b"})`);
+        const activeModel = resp.activeProvider === "groq"
+          ? (resp.config?.groqModel || "qwen/qwen3.8-27b")
+          : (modelName || "gemma3:4b");
+        const providerLabel = resp.activeProvider === "groq" ? "Groq" : "Ollama";
+        updateKeyStatus(true, `✓ ${providerLabel} (${activeModel})`);
       } else if (resp && resp.providers?.ollama?.status === "model_missing") {
         updateKeyStatus(false, `⚠ Model missing (pull ${modelName})`);
       } else {
-        updateKeyStatus(false, "⚠ Ollama Offline");
+        updateKeyStatus(false, `⚠ ${resp?.guidance || "Engine Offline"}`);
       }
     });
   } catch (_) {
-    updateKeyStatus(false, "⚠ Local Engine Offline");
+    updateKeyStatus(false, "⚠ AI Engine Offline");
   }
 }
 
@@ -245,8 +249,9 @@ chrome.storage.sync.get({ feedScanner: true, blurAdult: true }, (result) => {
   toggleBlur.checked = result.blurAdult   !== false;
 });
 
-chrome.storage.local.get(["ollamaModel"], (result) => {
-  const model = result.ollamaModel || "gemma3:4b";
+chrome.storage.local.get(["ollamaModel", "groqModel", "llmProvider"], (result) => {
+  const isGroq = (result.llmProvider || "groq") === "groq";
+  const model = isGroq ? (result.groqModel || "qwen/qwen3.8-27b") : (result.ollamaModel || "gemma3:4b");
   apiKeyInput.value = model;
   checkEngineStatus(model);
 });

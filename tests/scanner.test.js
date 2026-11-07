@@ -163,5 +163,38 @@ Contact: recruiter.techsolutions@gmail.com`;
     assert.equal(evaluation.checklist.contactValidity.status, "fail");
     assert.ok(evaluation.redFlags.length >= 2);
   });
+
+  // 9. Legitimate Walk-In Job Post Multi-Check (Hetero)
+  test("9. Legitimate walk-in multi-check correctly validates corporate domain, physical venue, and zero fees", async () => {
+    const heteroPost = `HIRING FRESHERS | HETERO | SANATH NAGAR, HYDERABAD 🚨
+Freshers, start your career with Hetero!
+Hetero is hiring freshers for Production & Packing (OSD) and Warehouse roles.
+Open Positions: Production & Packing (OSD): ITI / Diploma / BSc / BCom / BA / B.Tech, Warehouse: BSc / BCom / BA
+Experience: Freshers. Eligible Batches: 2024 / 2025 / 2026 passed-outs
+Work Location: Hyderabad / Bangalore
+Interview Date: 7th November 2026 (Saturday) 9:30 AM – 4:00 PM
+Venue: 7-2-A2, Hetero Corporate, Industrial Estates, Sanath Nagar, Hyderabad
+Please bring: Updated Resume, Education Documents, ID Proof (Aadhar/PAN)
+For further information: Hemanth.v@hetero.com`;
+
+    const entities = extractJobEntities(heteroPost);
+
+    assert.equal(entities.company, "HETERO");
+    assert.ok(entities.roles.includes("Production & Packing"));
+    assert.ok(entities.roles.includes("Warehouse"));
+    assert.ok(entities.contacts.corporateEmails.includes("hemanth.v@hetero.com"));
+    assert.equal(entities.contacts.freeEmails.length, 0);
+    assert.equal(entities.fees, null);
+
+    const evaluation = await verifyJobPosting(entities, () => {});
+
+    assert.equal(evaluation.verdict, "Likely legitimate");
+    assert.equal(evaluation.riskLevel, "SAFE");
+    assert.ok(evaluation.credibilityScore >= 70);
+    assert.equal(evaluation.checklist.feeCheck.status, "pass");
+    assert.equal(evaluation.checklist.contactValidity.status, "pass");
+    assert.equal(evaluation.checklist.companyWebsite.status, "pass");
+    assert.equal(evaluation.officialDomain, "hetero.com");
+  });
 });
 

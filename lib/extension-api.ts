@@ -7,21 +7,47 @@
  */
 
 import type { ScanResponse } from "@/types/extension";
-import { callLocalLLM, callLocalLLMMultimodal } from "@/lib/ai";
+import { callLocalLLM, callLocalLLMMultimodal, callGroqLLM } from "@/lib/ai";
 
 type MessagePayload = Record<string, unknown>;
 
 /**
  * Web fallback when running outside extension context.
- * Queries local Ollama daemon without any external API keys.
+ * Queries Groq Cloud or local Ollama engine.
  */
 async function webFallback(payload: MessagePayload): Promise<ScanResponse> {
+  const provider = typeof window !== "undefined"
+    ? localStorage.getItem("llmProvider") || "groq"
+    : "groq";
+  const groqApiKey = typeof window !== "undefined"
+    ? localStorage.getItem("groqApiKey") || undefined
+    : undefined;
+  const groqModel = typeof window !== "undefined"
+    ? localStorage.getItem("groqModel") || undefined
+    : undefined;
   const host = typeof window !== "undefined"
     ? localStorage.getItem("ollamaHost") || "http://localhost:11434"
     : "http://localhost:11434";
   const model = typeof window !== "undefined"
     ? localStorage.getItem("ollamaModel") || "gemma3:4b"
     : "gemma3:4b";
+
+  const executeChat = async <T = Record<string, unknown>>(system: string, user: string): Promise<T> => {
+    if (provider === "groq") {
+      try {
+        return await callGroqLLM<T>(system, user, { apiKey: groqApiKey, model: groqModel });
+      } catch (err) {
+        // Fallback to local Ollama if Groq fails
+        return await callLocalLLM<T>(system, user, { host, model });
+      }
+    }
+    try {
+      return await callLocalLLM<T>(system, user, { host, model });
+    } catch (err) {
+      // Fallback to Groq if Ollama fails
+      return await callGroqLLM<T>(system, user, { apiKey: groqApiKey, model: groqModel });
+    }
+  };
 
   try {
     if (payload.action === "SCAN_POLICY") {
@@ -30,7 +56,7 @@ async function webFallback(payload: MessagePayload): Promise<ScanResponse> {
         throw new Error("For web standalone mode, please paste policy text directly.");
       }
       const system = `You are a privacy analyst. Reply ONLY JSON: {"riskScore":number,"riskLevel":"SAFE"|"CAUTION"|"DANGER","summary":"1 sentence","whatTheyCollect":string[],"whoTheyShare":string[],"yourRights":string[],"redFlags":string[],"simpleSummary":"1 sentence","optOutTips":string[],"verdict":"1 sentence"}`;
-      const result = await callLocalLLM(system, `Analyze Policy:\n${input.slice(0, 3000)}`, { host, model });
+      const result = await executeChat(system, `Analyze Policy:\n${input.slice(0, 3000)}`);
       return { success: true, result, cached: false, remainingCalls: 999 };
     }
 
@@ -38,12 +64,35 @@ async function webFallback(payload: MessagePayload): Promise<ScanResponse> {
       const text = (payload.text as string) || "";
       const isJob = /hiring|internship|walk-?in|freshers?|apply|stipend|vacancy|recruitment/i.test(text);
       if (isJob) {
-        const system = `You are a job legitimacy analyst running locally. Analyze the job posting text for legitimacy and scam patterns (registration fees, free-mail contacts, vague requirements). Reply ONLY valid JSON with keys: {"type":"job","verdict":"Likely legitimate"|"Unverified"|"High scam risk","riskLevel":"SAFE"|"CAUTION"|"DANGER","credibilityScore":number,"explanation":"1 sentence","redFlags":string[],"advice":string[],"checklist":{"companyWebsite":{"label":"Company Website","status":"pass"|"fail"|"unknown","detail":"summary"},"careersListing":{"label":"Careers Portal","status":"pass"|"fail"|"unknown","detail":"summary"},"contactValidity":{"label":"Contact Validity","status":"pass"|"fail"|"unknown","detail":"summary"},"feeCheck":{"label":"Fees & Deposits","status":"pass"|"fail"|"unknown","detail":"summary"}}}`;
-        const result = await callLocalLLM(system, `Analyze Job Notice:\n${text}`, { host, model });
+        const system = `You are an expert recruitment fraud investigator and corporate verification intelligence engine.
+Analyze job postings, walk-in notifications, and internship offers for authenticity and scam patterns.
+Reply strictly valid JSON adhering to:
+{
+  "type": "job",
+  "verdict": "Likely legitimate" | "Unverified" | "High scam risk",
+  "riskLevel": "SAFE" | "CAUTION" | "DANGER",
+  "credibilityScore": number,
+  "explanation": "1-2 sentences",
+  "redFlags": string[],
+  "passedChecks": string[],
+  "advice": string[],
+  "checklist": {
+    "companyWebsite": { "label": "Company Website", "status": "pass" | "fail" | "unknown", "detail": string },
+    "careersListing": { "label": "Careers Portal Listing", "status": "pass" | "fail" | "unknown", "detail": string },
+    "linkedInPresence": { "label": "LinkedIn & Social Presence", "status": "pass" | "fail" | "unknown", "detail": string },
+    "contactValidity": { "label": "Contact Validity", "status": "pass" | "fail" | "unknown", "detail": string },
+    "domainAge": { "label": "Domain Age / RDAP", "status": "pass" | "fail" | "unknown", "detail": string },
+    "scamReports": { "label": "Scam & Complaint Reports", "status": "pass" | "fail" | "unknown", "detail": string },
+    "feeCheck": { "label": "Application & Training Fees", "status": "pass" | "fail" | "unknown", "detail": string },
+    "aiMultiCheck": { "label": "AI Multi-Check & Deep Audit", "status": "pass" | "fail" | "unknown", "detail": string }
+  },
+  "simpleSummary": "Concise summary for candidate"
+}`;
+        const result = await executeChat(system, `Analyze Job Notice:\n${text}`);
         return { success: true, result, cached: false, remainingCalls: 999 };
       }
-      const system = `You are a forensic fact-checking engine. Reply ONLY JSON: {"type":"claim","verdict":"supported"|"contradicted"|"insufficient","confidence":number,"reasoning":"1 sentence","citations":[{"url":string,"quote":string}]}`;
-      const result = await callLocalLLM(system, `Claim to evaluate: "${text}"`, { host, model });
+      const system = `You are a forensic fact-checking engine. Reply ONLY JSON: {"type":"claim","verdict":"supported"|"contradicted"|"insufficient","confidence":number,"reasoning":"1 sentence","citations":[{"url":string,"quote":string}],"simpleSummary":"1 sentence"}`;
+      const result = await executeChat(system, `Claim to evaluate: "${text}"`);
       return { success: true, result, cached: false, remainingCalls: 999 };
     }
 

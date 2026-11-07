@@ -417,19 +417,36 @@
 
         <!-- Collapsible Advanced Area -->
         <div id="factcheck-advanced-area" style="display:none;margin-bottom:14px;padding:12px 14px;background:#000000;border:1px solid var(--border);border-radius:8px;font-size:12px">
-          <div style="font-weight:600;margin-bottom:8px;color:var(--text);font-family:'JetBrains Mono',monospace">Ollama Configuration</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+          <div style="font-weight:600;margin-bottom:8px;color:var(--text);font-family:'JetBrains Mono',monospace">Inference Engine &amp; AI Provider</div>
+          <div style="margin-bottom:10px">
+            <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">PROVIDER</label>
+            <select id="fc-setting-provider" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+              <option value="groq">Groq Cloud API (High-Speed ~150ms · Recommended)</option>
+              <option value="ollama">Ollama (Local Daemon at localhost:11434)</option>
+            </select>
+          </div>
+          <div id="fc-groq-settings" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px">
             <div>
-              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">MODEL</label>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">GROQ API KEY</label>
+              <input type="password" id="fc-setting-groq-key" value="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" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">GROQ MODEL</label>
+              <input type="text" id="fc-setting-groq-model" value="qwen/qwen3.8-27b" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
+            </div>
+          </div>
+          <div id="fc-ollama-settings" style="display:none;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">OLLAMA MODEL</label>
               <input type="text" id="fc-setting-model" value="gemma3:4b" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
             </div>
             <div>
-              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">HOST</label>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">OLLAMA HOST</label>
               <input type="text" id="fc-setting-host" value="http://localhost:11434" style="width:100%;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
             </div>
           </div>
           <div style="margin-top:6px;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">
-            Persisted locally. Ensure daemon started with <code>OLLAMA_ORIGINS="chrome-extension://*"</code>.
+            Configured provider executes Fact &amp; Job verification with multi-check audits.
           </div>
         </div>
 
@@ -496,16 +513,45 @@
     <div class="panel" id="panel-settings">
       <div class="tool-card">
         <div class="tool-header">
-          <span class="tool-label" style="color:var(--text3)">LOCAL HARDWARE PARAMETERS</span>
-          <div class="tool-title">Local Model Configuration</div>
-          <p class="tool-desc">Configure your preferred Ollama model name. Defaults to <code>gemma3:4b</code> for reasoning or <code>gemma2:2b</code> for lightweight setups.</p>
+          <span class="tool-label" style="color:var(--text3)">INFERENCE &amp; CLOUD CONFIGURATION</span>
+          <div class="tool-title">AI Engine Settings</div>
+          <p class="tool-desc">Configure Groq Cloud API for ultra-fast (~150ms) fact and job multi-checks, or Ollama for 100% on-device private inference.</p>
         </div>
-        
-        <div class="input-row">
-          <input type="text" id="api-key-input" placeholder="Ollama Model Name (e.g. gemma3:4b, gemma2:2b)" />
-          <button class="btn btn-primary" id="btn-save-key">Save Model</button>
+
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">PRIMARY INFERENCE PROVIDER</label>
+            <select id="settings-provider-select" style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+              <option value="groq">Groq Cloud API (High-Speed ~150ms · Active)</option>
+              <option value="ollama">Ollama (100% Local Daemon at localhost:11434)</option>
+            </select>
+          </div>
+
+          <div id="settings-groq-block" style="display:flex;flex-direction:column;gap:10px">
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">GROQ API KEY</label>
+              <input type="password" id="settings-groq-key" value="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" placeholder="gsk_..." style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">GROQ MODEL IDENTIFIER</label>
+              <input type="text" id="settings-groq-model" value="qwen/qwen3.8-27b" style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+            </div>
+          </div>
+
+          <div id="settings-ollama-block" style="display:none;flex-direction:column;gap:10px">
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">OLLAMA MODEL NAME</label>
+              <input type="text" id="api-key-input" placeholder="gemma3:4b" style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">OLLAMA HOST</label>
+              <input type="text" id="settings-ollama-host" value="http://localhost:11434" style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+            </div>
+          </div>
         </div>
-        <div id="settings-result" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--safe);display:none;margin-top:4px">✓ Model configuration saved successfully.</div>
+
+        <button class="btn btn-primary" id="btn-save-key">Save Settings</button>
+        <div id="settings-result" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--safe);display:none;margin-top:8px">✓ Engine configuration saved successfully.</div>
       </div>
     </div>
 

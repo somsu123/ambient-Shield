@@ -62,6 +62,33 @@
 
 ## 5. Changelog & Modifications Ledger
 
+### [2026-11-07] — Groq Cloud LLM Integration & AI Multi-Check Fact & Job Verifier
+- **Groq Cloud LLM Provider (`extension/llm/providers/groq.js`):**
+  - Added native Groq provider using Groq's high-speed OpenAI-compatible completions endpoint (`https://api.groq.com/openai/v1/chat/completions`).
+  - Active Model: `qwen/qwen3.8-27b` (ultra-fast ~140ms latency with strict JSON formatting `response_format: { type: "json_object" }`).
+  - Implemented `checkGroqHealth` and `chatGroq` with AbortController timeout, exponential backoff retries, and schema validation.
+- **Unified Orchestrator & Multi-Provider Cascade (`extension/llm/index.js`, `extension/llm.js`):**
+  - Upgraded `callLLM`, `checkLLMHealth`, and configuration loaders to dynamically support both Groq Cloud and local Ollama (`gemma3:4b`).
+  - Seamless fallback cascade: Groq Cloud -> Local Ollama -> In-browser offscreen worker.
+  - Automatic JSON extraction, code-fence stripping, and repair retry on invalid JSON outputs.
+- **Deep AI Job & Hiring Post Multi-Check (`extension/scanner/job-verifier.js`):**
+  - Integrated 8-point verification pipeline incorporating Check 8: `AI Multi-Check & Deep Audit`.
+  - Prompts Groq with full job posting, extracted contacts, corporate domain, and live web search context.
+  - Multi-angle forensic analysis:
+    1. Corporate Identity & Standing (e.g., verifying Hetero Drugs Limited as a reputable pharmaceutical manufacturer).
+    2. Physical Venue & Headquarters Verification (e.g., confirming 7-2-A2 Sanath Nagar Hyderabad corresponds to real corporate offices).
+    3. Role & Educational Stream Plausibility (OSD Production & Packing, Warehouse with ITI/Diploma/BSc/BCom/BA/B.Tech).
+    4. Contact & Recruiter Authenticity (corporate `hemanth.v@hetero.com` on established 27-year-old `hetero.com` domain vs disposable free-mail).
+    5. Scam & Fraud Pattern Analysis (screening for upfront registration fees, training charges, or 'no interview' lures).
+  - Synthesizes risk level (`SAFE`, `CAUTION`, `DANGER`), credibility score (up to 95%), and tailored actionable safeguards for applicants.
+- **UI & Configuration Hubs (`app/settings/SettingsForm.tsx`, `extension/dashboard.*`, `extension/popup.*`, `lib/ai.ts`, `lib/extension-api.ts`):**
+  - Added Groq Cloud Provider selection, API key configuration, and live connection health ping buttons.
+  - Embedded AI Multi-Check results, checklist cards, and audit details directly into the dashboard and popup.
+- **Testing & Verification:**
+  - 33/33 unit tests passing across all suites (`npm test`).
+  - Next.js static production build verified passing (`npm run build`).
+  - Chrome Extension bundling script verified passing (`npm run build:ext`).
+
 ### [2026-11-07] — Frontend Rebuild: 21st.dev White and Black Professional Theme
 - **Frontend-Design Skill Imported:**
   - Skill `frontend-design` from `https://github.com/Ilm-Alan/frontend-design` formally imported and integrated.

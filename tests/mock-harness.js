@@ -52,6 +52,45 @@ export function createMockFetch(handlers = {}) {
       };
     }
 
+    // Default Groq chat mock
+    if (urlStr.includes("api.groq.com") && urlStr.includes("/chat/completions")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  verdict: "supported",
+                  confidence: 0.95,
+                  reasoning: "The retrieved evidence explicitly confirms this claim.",
+                  citations: [
+                    {
+                      url: "https://en.wikipedia.org/wiki/Test_Topic",
+                      quote: "verified fact in text",
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+        text: async () => "",
+      };
+    }
+
+    // Default Groq models mock
+    if (urlStr.includes("api.groq.com") && urlStr.includes("/models")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [{ id: "qwen/qwen3.8-27b" }, { id: "openai/gpt-oss-120b" }],
+        }),
+      };
+    }
+
     return {
       ok: false,
       status: 404,

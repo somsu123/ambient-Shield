@@ -49,20 +49,90 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Settings
-  document.getElementById('btn-save-key').addEventListener('click', () => {
-    const model = document.getElementById('api-key-input').value.trim() || 'gemma3:4b';
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ ollamaModel: model }, () => {
-        const res = document.getElementById('settings-result');
-        res.style.display = 'block';
-        setTimeout(() => res.style.display = 'none', 3000);
-      });
-    }
-  });
+  const DEFAULT_GROQ_KEY = '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';
+  const DEFAULT_GROQ_MODEL = 'qwen/qwen3.8-27b';
 
-  // Load existing model
+  const settingsProviderSelect = document.getElementById('settings-provider-select');
+  const fcProviderSelect = document.getElementById('fc-setting-provider');
+  const settingsGroqBlock = document.getElementById('settings-groq-block');
+  const settingsOllamaBlock = document.getElementById('settings-ollama-block');
+  const fcGroqBlock = document.getElementById('fc-groq-settings');
+  const fcOllamaBlock = document.getElementById('fc-ollama-settings');
+
+  function updateProviderVisibility(prov) {
+    if (settingsProviderSelect) settingsProviderSelect.value = prov;
+    if (fcProviderSelect) fcProviderSelect.value = prov;
+    if (settingsGroqBlock) settingsGroqBlock.style.display = prov === 'groq' ? 'flex' : 'none';
+    if (settingsOllamaBlock) settingsOllamaBlock.style.display = prov === 'ollama' ? 'flex' : 'none';
+    if (fcGroqBlock) fcGroqBlock.style.display = prov === 'groq' ? 'grid' : 'none';
+    if (fcOllamaBlock) fcOllamaBlock.style.display = prov === 'ollama' ? 'grid' : 'none';
+  }
+
+  if (settingsProviderSelect) {
+    settingsProviderSelect.addEventListener('change', (e) => {
+      const p = e.target.value;
+      updateProviderVisibility(p);
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ llmProvider: p });
+      }
+    });
+  }
+  if (fcProviderSelect) {
+    fcProviderSelect.addEventListener('change', (e) => {
+      const p = e.target.value;
+      updateProviderVisibility(p);
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ llmProvider: p });
+      }
+    });
+  }
+
+  const btnSaveKey = document.getElementById('btn-save-key');
+  if (btnSaveKey) {
+    btnSaveKey.addEventListener('click', () => {
+      const prov = settingsProviderSelect ? settingsProviderSelect.value : 'groq';
+      const groqKey = (document.getElementById('settings-groq-key')?.value || DEFAULT_GROQ_KEY).trim();
+      const groqModel = (document.getElementById('settings-groq-model')?.value || DEFAULT_GROQ_MODEL).trim();
+      const ollamaModel = (document.getElementById('api-key-input')?.value || 'gemma3:4b').trim();
+      const ollamaHost = (document.getElementById('settings-ollama-host')?.value || 'http://localhost:11434').trim();
+
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({
+          llmProvider: prov,
+          groqApiKey: groqKey,
+          groqModel: groqModel,
+          ollamaModel: ollamaModel,
+          ollamaHost: ollamaHost,
+        }, () => {
+          const res = document.getElementById('settings-result');
+          if (res) {
+            res.style.display = 'block';
+            setTimeout(() => res.style.display = 'none', 3000);
+          }
+        });
+      }
+    });
+  }
+
+  // Load existing model & provider settings
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get(['ollamaModel', 'ollamaHost'], (res) => {
+    chrome.storage.local.get(['llmProvider', 'groqApiKey', 'groqModel', 'ollamaModel', 'ollamaHost'], (res) => {
+      const prov = res.llmProvider || 'groq';
+      updateProviderVisibility(prov);
+
+      const groqKey = res.groqApiKey || DEFAULT_GROQ_KEY;
+      const groqModel = res.groqModel || DEFAULT_GROQ_MODEL;
+
+      const sGKey = document.getElementById('settings-groq-key');
+      if (sGKey) sGKey.value = groqKey;
+      const fcGKey = document.getElementById('fc-setting-groq-key');
+      if (fcGKey) fcGKey.value = groqKey;
+
+      const sGModel = document.getElementById('settings-groq-model');
+      if (sGModel) sGModel.value = groqModel;
+      const fcGModel = document.getElementById('fc-setting-groq-model');
+      if (fcGModel) fcGModel.value = groqModel;
+
       if (res.ollamaModel) {
         const apiKeyEl = document.getElementById('api-key-input');
         if (apiKeyEl) apiKeyEl.value = res.ollamaModel;
@@ -70,6 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fcModelEl) fcModelEl.value = res.ollamaModel;
       }
       if (res.ollamaHost) {
+        const sOHost = document.getElementById('settings-ollama-host');
+        if (sOHost) sOHost.value = res.ollamaHost;
         const fcHostEl = document.getElementById('fc-setting-host');
         if (fcHostEl) fcHostEl.value = res.ollamaHost;
       }
@@ -87,6 +159,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const fcModelInput = document.getElementById('fc-setting-model');
   const fcHostInput = document.getElementById('fc-setting-host');
+  const fcGroqKeyInput = document.getElementById('fc-setting-groq-key');
+  const fcGroqModelInput = document.getElementById('fc-setting-groq-model');
+
+  if (fcGroqKeyInput) {
+    fcGroqKeyInput.addEventListener('change', () => {
+      const val = fcGroqKeyInput.value.trim() || DEFAULT_GROQ_KEY;
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ groqApiKey: val });
+      }
+    });
+  }
+  if (fcGroqModelInput) {
+    fcGroqModelInput.addEventListener('change', () => {
+      const val = fcGroqModelInput.value.trim() || DEFAULT_GROQ_MODEL;
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ groqModel: val });
+      }
+    });
+  }
   if (fcModelInput) {
     fcModelInput.addEventListener('change', () => {
       const val = fcModelInput.value.trim() || 'gemma3:4b';

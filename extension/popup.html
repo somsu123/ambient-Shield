@@ -444,21 +444,21 @@
     <div class="divider"></div>
 
     <!-- Local AI Engine panel -->
-    <span class="section-label">Local Inference</span>
+    <span class="section-label">AI Inference Engine</span>
     <div class="api-panel">
       <div class="api-row" id="api-row-toggle">
         <div class="api-row-left">
-          <span class="toggle-name">Ollama (Gemma)</span>
+          <span class="toggle-name" id="ai-engine-name">AI Engine (Groq / Ollama)</span>
           <span id="api-key-status" class="api-key-status">Checking engine…</span>
         </div>
         <span class="api-expand-icon" id="api-expand-icon">▼</span>
       </div>
       <div class="api-body" id="api-body">
         <div class="api-input-row">
-          <input class="api-input" id="api-key-input" type="text" placeholder="gemma3:4b" autocomplete="off" spellcheck="false" />
+          <input class="api-input" id="api-key-input" type="text" placeholder="qwen/qwen3.8-27b or gemma3:4b" autocomplete="off" spellcheck="false" />
           <button class="btn btn-primary btn-small" id="btn-save-key">Save</button>
         </div>
-        <span class="api-hint" id="ollama-hint">100% private. Run: <code>ollama pull gemma3:4b</code></span>
+        <span class="api-hint" id="ollama-hint">Supports Groq Cloud (~150ms verification) &amp; local Ollama.</span>
       </div>
     </div>
 

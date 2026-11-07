@@ -5,11 +5,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
+const DEFAULT_GROQ_KEY = "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";
+const DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b";
+
 export default function SettingsForm() {
-  const [provider, setProvider] = useState("ollama");
+  const [provider, setProvider] = useState("groq");
+  const [groqApiKey, setGroqApiKey] = useState(DEFAULT_GROQ_KEY);
+  const [groqModel, setGroqModel] = useState(DEFAULT_GROQ_MODEL);
   const [ollamaHost, setOllamaHost] = useState("http://localhost:11434");
   const [ollamaModel, setOllamaModel] = useState("gemma3:4b");
-  const [timeoutSec, setTimeoutSec] = useState("45");
+  const [timeoutSec, setTimeoutSec] = useState("30");
   const [localOnlyMode, setLocalOnlyMode] = useState(false);
   const [debugLog, setDebugLog] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -25,9 +30,11 @@ export default function SettingsForm() {
       const g = window as unknown as { chrome?: { storage?: { local?: { get: (keys: string[], cb: (res: Record<string, unknown>) => void) => void } } } };
       if (g.chrome?.storage?.local) {
         g.chrome.storage.local.get(
-          ["llmProvider", "ollamaHost", "ollamaModel", "llmTimeoutMs", "localOnlyMode", "llmDebug"],
+          ["llmProvider", "groqApiKey", "groqModel", "ollamaHost", "ollamaModel", "llmTimeoutMs", "localOnlyMode", "llmDebug"],
           (res) => {
             if (res.llmProvider) setProvider(String(res.llmProvider));
+            if (res.groqApiKey) setGroqApiKey(String(res.groqApiKey));
+            if (res.groqModel) setGroqModel(String(res.groqModel));
             if (res.ollamaHost) setOllamaHost(String(res.ollamaHost));
             if (res.ollamaModel) setOllamaModel(String(res.ollamaModel));
             if (res.llmTimeoutMs) setTimeoutSec(String(Math.round(Number(res.llmTimeoutMs) / 1000)));
@@ -37,12 +44,16 @@ export default function SettingsForm() {
         );
       } else {
         const p = localStorage.getItem("llmProvider");
+        const gak = localStorage.getItem("groqApiKey");
+        const gm = localStorage.getItem("groqModel");
         const h = localStorage.getItem("ollamaHost");
         const m = localStorage.getItem("ollamaModel");
         const t = localStorage.getItem("llmTimeoutSec");
         const l = localStorage.getItem("localOnlyMode");
         const d = localStorage.getItem("llmDebug");
         if (p) setProvider(p);
+        if (gak) setGroqApiKey(gak);
+        if (gm) setGroqModel(gm);
         if (h) setOllamaHost(h);
         if (m) setOllamaModel(m);
         if (t) setTimeoutSec(t);
@@ -57,6 +68,41 @@ export default function SettingsForm() {
     setHealthStatus({ tested: false, ok: false, message: "Testing connection..." });
 
     try {
+      if (provider === "groq") {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 6000);
+        const res = await fetch("https://api.groq.com/openai/v1/models", {
+          headers: { Authorization: `Bearer ${groqApiKey.trim()}` },
+          signal: ctrl.signal,
+        });
+        clearTimeout(tid);
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          setHealthStatus({
+            tested: true,
+            ok: false,
+            message: `Groq error (HTTP ${res.status}): ${errText || res.statusText}`,
+          });
+          return;
+        }
+
+        const data = await res.json();
+        const models = (data.data || []).map((x: { id: string }) => x.id);
+        const hasModel = models.includes(groqModel.trim());
+
+        setHealthStatus({
+          tested: true,
+          ok: true,
+          models: models.slice(0, 10),
+          message: hasModel
+            ? `Groq Cloud active. Model "${groqModel}" verified ready.`
+            : `Groq Cloud active. Note: model "${groqModel}" might not be in default list.`,
+        });
+        return;
+      }
+
+      // Ollama check
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 4000);
       const res = await fetch(`${ollamaHost.replace(/\/+$/, "")}/api/tags`, { signal: ctrl.signal });
@@ -90,11 +136,12 @@ export default function SettingsForm() {
           message: `Ollama active. Model "${ollamaModel}" verified ready for inference.`,
         });
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       setHealthStatus({
         tested: true,
         ok: false,
-        message: `Unable to connect to Ollama at ${ollamaHost}. Ensure daemon is running and CORS is enabled via OLLAMA_ORIGINS="*".`,
+        message: `Connection failed: ${msg}`,
       });
     } finally {
       setChecking(false);
@@ -102,9 +149,11 @@ export default function SettingsForm() {
   };
 
   const handleSave = () => {
-    const timeoutMs = Math.max(5000, Math.min(180000, (parseInt(timeoutSec) || 45) * 1000));
+    const timeoutMs = Math.max(5000, Math.min(180000, (parseInt(timeoutSec) || 30) * 1000));
     const config = {
       llmProvider: provider,
+      groqApiKey: groqApiKey.trim(),
+      groqModel: groqModel.trim(),
       ollamaHost: ollamaHost.trim(),
       ollamaModel: ollamaModel.trim(),
       llmTimeoutMs: timeoutMs,
@@ -114,6 +163,8 @@ export default function SettingsForm() {
 
     if (typeof window !== "undefined") {
       localStorage.setItem("llmProvider", provider);
+      localStorage.setItem("groqApiKey", groqApiKey.trim());
+      localStorage.setItem("groqModel", groqModel.trim());
       localStorage.setItem("ollamaHost", ollamaHost.trim());
       localStorage.setItem("ollamaModel", ollamaModel.trim());
       localStorage.setItem("llmTimeoutSec", timeoutSec);
@@ -129,17 +180,17 @@ export default function SettingsForm() {
       }
     }
 
-    toast.success("Local settings saved successfully.");
+    toast.success("Configuration saved successfully.");
   };
 
   return (
     <div className="space-y-6 max-w-xl">
       <div>
         <h3 className="text-sm font-semibold font-mono uppercase tracking-wider text-white mb-1">
-          Local Inference Engine (100% On-Device)
+          Inference Engine &amp; AI Provider
         </h3>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          Ambient Shield uses zero cloud tokens or external keys. All model inference executes privately on your hardware via Ollama.
+          Configure Groq Cloud API for ultra-fast verification or Ollama for 100% on-device private inference.
         </p>
       </div>
 
@@ -153,39 +204,78 @@ export default function SettingsForm() {
             onChange={(e) => setProvider(e.target.value)}
             className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
           >
-            <option value="ollama">Ollama (Daemon at localhost:11434)</option>
+            <option value="groq">Groq Cloud API (Ultra-Fast ~150ms · Recommended)</option>
+            <option value="ollama">Ollama (100% Local Daemon at localhost:11434)</option>
             <option value="offscreen">In-Browser Offscreen Fallback (Local stub)</option>
           </select>
         </div>
 
-        <div>
-          <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
-            Ollama Endpoint
-          </label>
-          <input
-            type="text"
-            value={ollamaHost}
-            onChange={(e) => setOllamaHost(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
-            placeholder="http://localhost:11434"
-          />
-        </div>
+        {provider === "groq" ? (
+          <>
+            <div>
+              <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+                Groq API Key
+              </label>
+              <input
+                type="password"
+                value={groqApiKey}
+                onChange={(e) => setGroqApiKey(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors font-mono"
+                placeholder="gsk_..."
+              />
+              <p className="text-[11px] text-zinc-500 mt-1 font-sans">
+                Active key configured for high-speed Fact &amp; Job verification.
+              </p>
+            </div>
 
-        <div>
-          <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
-            Model Identifier
-          </label>
-          <input
-            type="text"
-            value={ollamaModel}
-            onChange={(e) => setOllamaModel(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
-            placeholder="gemma3:4b"
-          />
-          <p className="text-[11px] text-zinc-500 mt-1 font-sans">
-            Recommended: <code className="text-zinc-400">gemma3:4b</code> (default) or <code className="text-zinc-400">gemma2:2b</code> (low VRAM).
-          </p>
-        </div>
+            <div>
+              <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+                Groq Model
+              </label>
+              <input
+                type="text"
+                value={groqModel}
+                onChange={(e) => setGroqModel(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
+                placeholder="qwen/qwen3.8-27b"
+              />
+              <p className="text-[11px] text-zinc-500 mt-1 font-sans">
+                Recommended: <code className="text-zinc-400">qwen/qwen3.8-27b</code> or <code className="text-zinc-400">openai/gpt-oss-120b</code>.
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+                Ollama Endpoint
+              </label>
+              <input
+                type="text"
+                value={ollamaHost}
+                onChange={(e) => setOllamaHost(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
+                placeholder="http://localhost:11434"
+              />
+            </div>
+
+            <div>
+              <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
+                Ollama Model Identifier
+              </label>
+              <input
+                type="text"
+                value={ollamaModel}
+                onChange={(e) => setOllamaModel(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-500 transition-colors"
+                placeholder="gemma3:4b"
+              />
+              <p className="text-[11px] text-zinc-500 mt-1 font-sans">
+                Recommended: <code className="text-zinc-400">gemma3:4b</code> (default) or <code className="text-zinc-400">gemma2:2b</code> (low VRAM).
+              </p>
+            </div>
+          </>
+        )}
 
         <div>
           <label className="block text-zinc-300 mb-1.5 font-sans font-medium text-xs">
@@ -241,10 +331,10 @@ export default function SettingsForm() {
           {checking ? (
             <>
               <Loader2 size={12} className="animate-spin" />
-              Pinging Ollama…
+              Testing {provider === "groq" ? "Groq API…" : "Ollama…"}
             </>
           ) : (
-            "Ping Connection"
+            `Ping ${provider === "groq" ? "Groq Cloud" : "Ollama"}`
           )}
         </button>
       </div>
@@ -258,12 +348,12 @@ export default function SettingsForm() {
           }`}
         >
           <div className="font-semibold mb-1">
-            {healthStatus.ok ? "✓ DAEMON HEALTHY" : "✕ CONNECTION NOTICE"}
+            {healthStatus.ok ? "✓ CONNECTION VERIFIED" : "✕ CONNECTION NOTICE"}
           </div>
           <div>{healthStatus.message}</div>
           {healthStatus.models && healthStatus.models.length > 0 && (
             <div className="mt-1.5 text-[11px] opacity-80">
-              Installed Models: {healthStatus.models.join(", ")}
+              Available Models: {healthStatus.models.join(", ")}
             </div>
           )}
         </div>

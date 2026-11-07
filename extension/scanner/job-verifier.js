@@ -2,8 +2,35 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { searchDuckDuckGoLite } from "./retrieval.js";
+import { callLLM } from "../llm.js";
 
 const RDAP_TIMEOUT_MS = 6000;
+
+export const JOB_AUDIT_SYSTEM = `You are an expert recruitment fraud investigator and corporate verification intelligence engine.
+Analyze job postings, walk-in notifications, and internship offers for authenticity and scam patterns.
+Evaluate:
+1. Corporate Identity: Is the stated employer genuine, and is this their standard domain/industry?
+2. Physical Venue: Does the walk-in venue correspond to real corporate premises/plants?
+3. Role & Requirements: Are the job roles, eligible streams (OSD, Warehouse, ITI/BSc/etc.), and qualifications legitimate?
+4. Recruiter Contact: Is the email/contact official corporate domain vs personal/free email?
+5. Fraud & Scam Signals: Are there red flags (application fees, training charges, no-interview promises, fake offers)?
+
+Return strictly valid JSON adhering to:
+{
+  "companyName": string,
+  "isKnownLegitimateEmployer": boolean,
+  "venueAuthenticity": "verified_corporate_site" | "unverified" | "suspicious",
+  "venueDetails": string,
+  "contactAuthenticity": "official_corporate_email" | "free_or_personal" | "suspicious",
+  "rolesPlausibility": string,
+  "fraudIndicators": string[],
+  "legitimacyIndicators": string[],
+  "verdict": "Likely legitimate" | "Suspicious / High Risk" | "High scam risk" | "Unverified",
+  "confidence": number,
+  "riskLevel": "SAFE" | "CAUTION" | "DANGER",
+  "summary": string,
+  "actionableAdvice": string[]
+}`;
 
 /**
  * Queries open RDAP endpoint to verify domain creation date.
@@ -96,6 +123,7 @@ export async function verifyJobPosting(entities, onProgress = () => {}) {
     domainAge: { label: "Domain Age / RDAP", status: "unknown", detail: "Not checked" },
     scamReports: { label: "Scam & Complaint Reports", status: "unknown", detail: "Not checked" },
     feeCheck: { label: "Application & Training Fees", status: "unknown", detail: "Not checked" },
+    aiMultiCheck: { label: "AI Multi-Check & Deep Audit", status: "unknown", detail: "Not checked" },
   };
 
   onProgress({ step: "analyzing", message: `Verifying hiring credentials for ${company || "company"}...` });
@@ -368,6 +396,80 @@ export async function verifyJobPosting(entities, onProgress = () => {}) {
     };
   }
 
+  // ── CHECK 8: AI Multi-Angle Deep Audit (Groq / LLM) ──
+  onProgress({ step: "ai_multicheck", message: "Running Groq AI multi-angle audit on hiring notice..." });
+
+  const advice = [];
+  let aiAudit = null;
+
+  try {
+    const auditRes = await callLLM({
+      system: JOB_AUDIT_SYSTEM,
+      prompt: `Analyze this job posting with available web context:
+Company: ${company || "Unknown"}
+Extracted Contacts: ${JSON.stringify(contacts)}
+Known Corporate Domain: ${officialDomain || "None"}
+Domain RDAP: ${checklist.domainAge.detail || "Not checked"}
+Web Search Summary: Website=${checklist.companyWebsite.status}, Careers=${checklist.careersListing.status}, ScamAlerts=${checklist.scamReports.status}
+
+POST TEXT:
+${raw}`,
+    });
+
+    if (auditRes.success && auditRes.data) {
+      aiAudit = auditRes.data;
+      aiAudit.provider = auditRes.provider || "groq";
+
+      // Incorporate AI fraud indicators
+      if (Array.isArray(aiAudit.fraudIndicators)) {
+        for (const fi of aiAudit.fraudIndicators) {
+          if (fi && !redFlags.some((rf) => rf.toLowerCase().includes(fi.toLowerCase().slice(0, 30)))) {
+            redFlags.push(fi);
+          }
+        }
+      }
+
+      // Incorporate AI legitimacy indicators
+      if (Array.isArray(aiAudit.legitimacyIndicators)) {
+        for (const li of aiAudit.legitimacyIndicators) {
+          if (li && !passedChecks.some((pc) => pc.toLowerCase().includes(li.toLowerCase().slice(0, 30)))) {
+            passedChecks.push(li);
+          }
+        }
+      }
+
+      // Incorporate AI actionable advice
+      if (Array.isArray(aiAudit.actionableAdvice)) {
+        for (const adv of aiAudit.actionableAdvice) {
+          if (adv && !advice.includes(adv)) {
+            advice.push(adv);
+          }
+        }
+      }
+
+      const isSafe = aiAudit.riskLevel === "SAFE" || (aiAudit.isKnownLegitimateEmployer && (!aiAudit.fraudIndicators || aiAudit.fraudIndicators.length === 0));
+      const isDanger = aiAudit.riskLevel === "DANGER" || (aiAudit.fraudIndicators && aiAudit.fraudIndicators.length >= 2);
+
+      checklist.aiMultiCheck = {
+        label: "AI Multi-Check & Deep Audit",
+        status: isDanger ? "fail" : (isSafe ? "pass" : "unknown"),
+        detail: aiAudit.summary || `AI deep audit completed (${aiAudit.provider}).`,
+      };
+    } else {
+      checklist.aiMultiCheck = {
+        label: "AI Multi-Check & Deep Audit",
+        status: "unknown",
+        detail: "AI deep audit offline; heuristic and live web checks active.",
+      };
+    }
+  } catch (_) {
+    checklist.aiMultiCheck = {
+      label: "AI Multi-Check & Deep Audit",
+      status: "unknown",
+      detail: "AI audit unavailable.",
+    };
+  }
+
   // ── Calculate Final Job Verdict ──
   let verdict = "Unverified";
   let riskLevel = "CAUTION";
@@ -376,11 +478,11 @@ export async function verifyJobPosting(entities, onProgress = () => {}) {
   const failCount = Object.values(checklist).filter((c) => c.status === "fail").length;
   const passCount = Object.values(checklist).filter((c) => c.status === "pass").length;
 
-  if (failCount >= 1 || redFlags.length >= 2) {
+  if (hasFeeFlag || failCount >= 1 || redFlags.length >= 2 || (aiAudit && aiAudit.riskLevel === "DANGER")) {
     verdict = "High scam risk";
     riskLevel = "DANGER";
     credibilityScore = Math.max(10, 30 - failCount * 10);
-  } else if (passCount >= 3 && redFlags.length === 0) {
+  } else if (passCount >= 3 && redFlags.length === 0 && (!aiAudit || aiAudit.riskLevel === "SAFE")) {
     verdict = "Likely legitimate";
     riskLevel = "SAFE";
     credibilityScore = Math.min(95, 70 + passCount * 5);
@@ -390,16 +492,23 @@ export async function verifyJobPosting(entities, onProgress = () => {}) {
     credibilityScore = 50;
   }
 
-  // Actionable advice
-  const advice = [];
+  // Base actionable advice
   if (verdict === "High scam risk") {
-    advice.push("⚠️ NEVER pay registration, training, or security deposit fees for any job.");
-    advice.push("Do not share Aadhaar, passport copies, or banking passwords over WhatsApp or unverified Google Forms.");
+    if (!advice.some((a) => a.includes("NEVER pay"))) {
+      advice.unshift("⚠️ NEVER pay registration, training, or security deposit fees for any job.");
+    }
+    if (!advice.some((a) => a.includes("Aadhaar"))) {
+      advice.push("Do not share Aadhaar, passport copies, or banking passwords over WhatsApp or unverified Google Forms.");
+    }
   }
   if (officialDomain) {
-    advice.push(`Cross-verify openings directly on the official company careers portal (https://${officialDomain}).`);
+    if (!advice.some((a) => a.includes(officialDomain))) {
+      advice.push(`Cross-verify openings directly on the official company careers portal (https://${officialDomain}).`);
+    }
   } else {
-    advice.push("Cross-verify the existence of this employer and opening via official corporate phone lines or HR contacts.");
+    if (!advice.some((a) => a.includes("corporate phone lines"))) {
+      advice.push("Cross-verify the existence of this employer and opening via official corporate phone lines or HR contacts.");
+    }
   }
 
   return {
@@ -419,6 +528,7 @@ export async function verifyJobPosting(entities, onProgress = () => {}) {
     officialDomain,
     careersUrl,
     entities,
+    aiAudit,
   };
 }
 

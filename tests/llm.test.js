@@ -152,4 +152,59 @@ describe("LLM Provider Abstraction & Orchestrator", () => {
     assert.equal(res.success, false);
     assert.match(res.error, /failed to connect|failed across providers|unavailable/i);
   });
+
+  test("6. Groq Provider: health check verifies Groq API connection and models", async () => {
+    restoreFetch = createMockFetch({
+      "api.groq.com/openai/v1/models": async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [{ id: "qwen/qwen3.8-27b" }, { id: "openai/gpt-oss-120b" }],
+        }),
+      }),
+    });
+
+    const { checkGroqHealth } = await import("../extension/llm/providers/groq.js");
+    const health = await checkGroqHealth("gsk_mock_test_key", "qwen/qwen3.8-27b");
+    assert.equal(health.ok, true);
+    assert.equal(health.status, "ready");
+    assert.equal(health.model, "qwen/qwen3.8-27b");
+  });
+
+  test("7. Groq Provider: executes chat request and returns structured data", async () => {
+    restoreFetch = createMockFetch({
+      "api.groq.com/openai/v1/chat/completions": async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  level: "safe",
+                  confidence: 0.98,
+                  reason: "Verified corporate announcement",
+                }),
+              },
+            },
+          ],
+        }),
+      }),
+    });
+
+    const res = await callLLM({
+      task: "TRUST_AURA",
+      prompt: "Authentic company notice",
+      options: {
+        provider: "groq",
+        groqApiKey: "gsk_mock_test_key",
+        groqModel: "qwen/qwen3.8-27b",
+      },
+    });
+
+    assert.equal(res.success, true);
+    assert.equal(res.provider, "groq");
+    assert.equal(res.data.level, "safe");
+    assert.equal(res.data.confidence, 0.98);
+  });
 });

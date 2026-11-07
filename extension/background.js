@@ -737,7 +737,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case MESSAGE_ACTIONS.PING:
       getLLMConfig().then(cfg => {
-        sendResponse({ ok: true, engine: cfg.provider, model: cfg.ollamaModel });
+        sendResponse({
+          ok: true,
+          engine: cfg.provider,
+          model: cfg.provider === "groq" ? cfg.groqModel : cfg.ollamaModel,
+        });
       });
       break;
 
@@ -803,6 +807,16 @@ chrome.tabs.onCreated.addListener(async (tab) => {
 
 // Context Menus
 chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.get(["groqApiKey", "groqModel", "llmProvider"], (res) => {
+    const toSet = {};
+    if (!res.groqApiKey) toSet.groqApiKey = "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";
+    if (!res.groqModel) toSet.groqModel = "qwen/qwen3.8-27b";
+    if (!res.llmProvider) toSet.llmProvider = "groq";
+    if (Object.keys(toSet).length > 0) {
+      chrome.storage.local.set(toSet);
+    }
+  });
+
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: "ambient-policy",    title: "🛡️ Analyze Privacy Policy", contexts: ["page"] });
     chrome.contextMenus.create({ id: "ambient-factcheck", title: "🛡️ Ambient Shield: Check this text", contexts: ["selection"] });
