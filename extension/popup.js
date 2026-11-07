@@ -357,22 +357,31 @@ modalPwInput.addEventListener("keydown", e => {
 });
 
 // ── URL Whitelist modal ── (Promise-based)
+let _wlResolve = null;
+
 function openUrlModal(existing = []) {
   return new Promise(resolve => {
+    _wlResolve = resolve;
     pendingWhitelist = [...existing];
     renderChips(pendingWhitelist);
     urlInput.value = ""; urlError.textContent = "";
     modalWhitelist.classList.remove("hidden");
     setTimeout(() => urlInput.focus(), 80);
-    modalWlDone.onclick   = () => { modalWhitelist.classList.add("hidden"); resolve(pendingWhitelist); };
-    modalWlCancel.onclick = () => { modalWhitelist.classList.add("hidden"); resolve(null); };
+    modalWlDone.onclick   = () => {
+      modalWhitelist.classList.add("hidden");
+      if (_wlResolve) { _wlResolve([...pendingWhitelist]); _wlResolve = null; }
+    };
+    modalWlCancel.onclick = () => {
+      modalWhitelist.classList.add("hidden");
+      if (_wlResolve) { _wlResolve(null); _wlResolve = null; }
+    };
   });
 }
 
 function addUrl() {
   let val = urlInput.value.trim();
   if (!val) return;
-  // Auto-prepend https:// if no protocol given (so users can type "google.com")
+  // Auto-prepend https:// so users can type "google.com" without protocol
   if (!/^https?:\/\//i.test(val)) {
     val = "https://" + val;
   }
@@ -391,8 +400,16 @@ function addUrl() {
 
 btnAddUrl.addEventListener("click", addUrl);
 urlInput.addEventListener("keydown", e => {
-  if (e.key === "Enter")  addUrl();
-  if (e.key === "Escape") { modalWhitelist.classList.add("hidden"); }
+  if (e.key === "Enter") {
+    e.preventDefault();    // prevent Enter from bubbling to buttons
+    e.stopPropagation();
+    addUrl();
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    modalWhitelist.classList.add("hidden");
+    if (_wlResolve) { _wlResolve(null); _wlResolve = null; }
+  }
 });
 
 // ── Update all UI to reflect current parental state ──────────────────────────
