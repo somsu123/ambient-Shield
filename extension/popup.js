@@ -301,9 +301,18 @@ let pwResolve        = null;
 function renderChips(urls) {
   urlChipsContainer.innerHTML = "";
   if (urls.length === 0) {
-    urlChipsContainer.innerHTML = '<span style="color:var(--text3);font-size:11px;padding:4px 2px">No URLs added yet</span>';
+    urlChipsContainer.innerHTML = '<span style="color:var(--text3);font-size:11px;padding:4px 2px">No sites added yet — add at least one below</span>';
+    // Disable Activate button and grey it out
+    modalWlDone.disabled = true;
+    modalWlDone.textContent = "✓ Activate Mode";
+    modalWlDone.style.opacity = "0.45";
     return;
   }
+  // Re-enable Activate button and show count
+  modalWlDone.disabled = false;
+  modalWlDone.style.opacity = "1";
+  modalWlDone.textContent = `✓ Activate Mode (${urls.length} site${urls.length === 1 ? "" : "s"})`;
+
   urls.forEach((url, i) => {
     const chip = document.createElement("div");
     chip.className = "url-chip";
@@ -311,9 +320,12 @@ function renderChips(urls) {
     try { label.textContent = new URL(url).hostname; } catch { label.textContent = url.slice(0, 35); }
     label.title = url;
     const rm = document.createElement("button");
-    rm.textContent = "×"; rm.title = "Remove";
+    rm.textContent = "×"; rm.title = "Remove " + url;
     rm.setAttribute("aria-label", `Remove ${url}`);
-    rm.onclick = () => { pendingWhitelist.splice(i, 1); renderChips(pendingWhitelist); };
+    rm.onclick = () => {
+      pendingWhitelist.splice(i, 1);
+      renderChips(pendingWhitelist);
+    };
     chip.appendChild(label); chip.appendChild(rm);
     urlChipsContainer.appendChild(chip);
   });
@@ -394,7 +406,11 @@ function addUrl() {
   }
   pendingWhitelist.push(val);
   renderChips(pendingWhitelist);
-  urlInput.value = ""; urlError.textContent = "";
+  urlInput.value = "";
+  // Show a hint so user knows they can keep adding more
+  urlError.style.color = "var(--accent, #4ade80)";
+  urlError.textContent = `✓ Added! Type another site or click "Activate Mode".`;
+  setTimeout(() => { urlError.textContent = ""; urlError.style.color = ""; }, 2500);
   urlInput.focus();
 }
 
