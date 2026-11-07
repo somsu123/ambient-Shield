@@ -38,7 +38,7 @@ export async function searchDuckDuckGoLite(query, limit = 5) {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
       body: `q=${encodeURIComponent(query)}`,
       signal: ctrl.signal,
@@ -46,37 +46,38 @@ export async function searchDuckDuckGoLite(query, limit = 5) {
 
     if (res.ok) {
       const html = await res.text();
-      // Match result-snippet table cells
-      const snipMatches = html.match(/class="result-snippet"[^>]*>([\s\S]*?)<\/td>/g) || [];
-      const linkMatches = html.match(/href="[^"]*uddg=[^"]+"/g) || [];
-      const titleMatches = html.match(/class="result-link"[^>]*>([\s\S]*?)<\/a>/g) || [];
 
-      for (let i = 0; i < Math.min(limit, snipMatches.length); i++) {
-        const snippet = stripSnippetMarkup(snipMatches[i]);
-        let url = "";
-        let title = "";
+      // Extract result-link <a> tags regardless of attribute order (rel, class, href)
+      const linkRegex = /<a\b(?=[^>]*class=['"]result-link['"])(?=[^>]*href=['"]([^'"]+)['"])[^>]*>([\s\S]*?)<\/a>/gi;
+      const snipRegex = /<td\b[^>]*class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/gi;
 
-        if (titleMatches[i]) {
-          title = stripSnippetMarkup(titleMatches[i]);
+      const links = [];
+      let m;
+      while ((m = linkRegex.exec(html)) !== null) {
+        let url = m[1];
+        const title = stripSnippetMarkup(m[2] || "");
+        if (url && url.includes("uddg=")) {
+          try {
+            url = decodeURIComponent(url.split("uddg=")[1].split("&")[0]);
+          } catch (_) {}
         }
-
-        if (linkMatches[i]) {
-          const m = linkMatches[i].match(/href="([^"]+)"/);
-          if (m && m[1].includes("uddg=")) {
-            try {
-              url = decodeURIComponent(m[1].split("uddg=")[1].split("&")[0]);
-            } catch (_) {}
-          }
+        if (url && !url.startsWith("mailto:") && !url.startsWith("javascript:")) {
+          links.push({ url, title });
         }
+      }
 
-        if (url && (snippet || title)) {
-          results.push({
-            title: title || query,
-            url,
-            snippet,
-            source: "DuckDuckGo",
-          });
-        }
+      const snips = [];
+      while ((m = snipRegex.exec(html)) !== null) {
+        snips.push(stripSnippetMarkup(m[1] || ""));
+      }
+
+      for (let i = 0; i < Math.min(limit, links.length); i++) {
+        results.push({
+          title: links[i].title || query,
+          url: links[i].url,
+          snippet: snips[i] || "",
+          source: "DuckDuckGo",
+        });
       }
     }
   } catch (_) {

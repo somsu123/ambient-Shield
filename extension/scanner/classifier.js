@@ -171,21 +171,25 @@ export function extractJobEntities(text) {
 
   // 5. Role / Designation Extraction
   const roles = [];
-  const roleMatch = raw.match(/(?:role|designation|position|job\s*title):?\s*([^\n\r,;|]+)/i);
-  if (roleMatch) roles.push(roleMatch[1].trim());
+  const knownRoles = [
+    "Production & Packing", "Production", "Packing", "Warehouse", "Quality Control",
+    "QC", "QA", "Quality Assurance", "R&D", "AR&D", "Formulation", "Software Engineer",
+    "Developer", "Data Analyst", "Data Scientist", "Product Manager", "Sales Executive",
+    "HR Executive", "Recruiter", "Marketing Associate", "Accountant", "Executive",
+    "Officer", "Analyst", "Intern"
+  ];
+  for (const r of knownRoles) {
+    const rx = new RegExp(`\\b${r.replace('&', '(?:&|and)')}\\b`, "i");
+    if (rx.test(raw) && !roles.some(existing => existing.toLowerCase().includes(r.toLowerCase()))) {
+      roles.push(r);
+    }
+  }
 
   if (roles.length === 0) {
-    const knownRoles = [
-      "Production", "Quality Control", "QC", "QA", "Quality Assurance", "R&D", "AR&D",
-      "Software Engineer", "Developer", "Data Analyst", "Data Scientist", "Product Manager",
-      "Sales Executive", "HR Executive", "Recruiter", "Marketing Associate", "Accountant",
-      "Executive", "Officer", "Analyst", "Intern"
-    ];
-    for (const r of knownRoles) {
-      const rx = new RegExp(`\\b${r}\\b`, "i");
-      if (rx.test(raw) && !roles.includes(r)) {
-        roles.push(r);
-      }
+    const roleMatch = raw.match(/(?:role|designation|position|job\s*title):\s*([^\n\r,;|•👉]{2,40})/i);
+    if (roleMatch && roleMatch[1]) {
+      const cleanR = roleMatch[1].trim();
+      if (cleanR.length >= 3 && cleanR.length <= 40) roles.push(cleanR);
     }
   }
 
