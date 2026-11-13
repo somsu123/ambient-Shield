@@ -105,15 +105,16 @@ export async function callLLM({
   const timeoutMs = options.timeoutMs || cfg.timeoutMs;
   const preferredProvider = options.provider || cfg.provider;
 
-  // Provider call helper
-  async function executeProvider(providerName) {
+  // Provider call helper — accepts an optional promptOverride for repair retries
+  async function executeProvider(providerName, promptOverride = null) {
+    const effectivePrompt = promptOverride !== null ? promptOverride : prompt;
     if (providerName === "groq") {
       const apiKey = options.groqApiKey || cfg.groqApiKey || DEFAULT_GROQ_KEY;
       const groqModel = options.groqModel || options.model || cfg.groqModel || DEFAULT_GROQ_MODEL;
-      return chatGroq({ apiKey, model: groqModel, system, prompt, timeoutMs });
+      return chatGroq({ apiKey, model: groqModel, system, prompt: effectivePrompt, timeoutMs });
     }
     if (providerName === "ollama") {
-      return chatOllama({ host, model, system, prompt, images, timeoutMs });
+      return chatOllama({ host, model, system, prompt: effectivePrompt, images, timeoutMs });
     }
     if (providerName === "offscreen") {
       return chatOffscreen();
@@ -155,8 +156,10 @@ export async function callLLM({
 
   // 4. One Repair Retry if JSON is invalid
   if (!parsed && response.raw) {
-    const repairPrompt = `The following text was supposed to be valid JSON. Convert it into valid JSON:\n\n${response.raw.slice(0, 2000)}`;
-    const repairRes = await executeProvider(providerUsed);
+    // BUG FIX: construct a repair prompt and pass it to the provider explicitly.
+    // Previously this called executeProvider() with the original prompt instead of the repair prompt.
+    const repairPrompt = `The following text was supposed to be valid JSON. Convert it to valid JSON only, with no explanation:\n\n${response.raw.slice(0, 2000)}`;
+    const repairRes = await executeProvider(providerUsed, repairPrompt);
     if (repairRes.success) {
       parsed = extractJSON(repairRes.raw);
     }

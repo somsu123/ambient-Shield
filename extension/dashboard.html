@@ -477,33 +477,118 @@
     <!-- ── DEEPFAKE DETECTOR ── -->
     <div class="panel" id="panel-deepfake">
       <div class="tool-card">
+        <!-- Header -->
         <div class="tool-header">
-          <span class="tool-label" style="color:var(--text3)">FORENSIC HEURISTICS &middot; VISION AI</span>
-          <div class="tool-title">Deepfake &amp; Image Inspector</div>
-          <p class="tool-desc">Upload a suspicious image or provide a URL. Ambient Shield inspects compression markers, known artifact patterns, and multimodal indicators.</p>
+          <span class="tool-label" style="color:var(--text3)">FORENSIC HEURISTICS · VISION AI · GROQ CLOUD &amp; LOCAL OLLAMA</span>
+          <div class="tool-title">Deepfake &amp; Video Scanner</div>
+          <p class="tool-desc">Upload an image or video, or paste a URL. Frames are extracted locally, analyzed per-frame by a multimodal model, and aggregated by code. Results are indicative only — not forensic proof.</p>
         </div>
 
-        <div class="file-drop" id="file-drop">
-          <div class="file-drop-icon">📷</div>
-          <p class="file-drop-text">Click to choose or drag &amp; drop image</p>
-          <p class="file-drop-hint">PNG, JPG, WebP, GIF &middot; Max 10 MB</p>
-          <input type="file" id="img-file" accept="image/*" />
+        <!-- AI Engine Settings (inline, collapsible) -->
+        <details id="df-settings-details" style="margin-bottom:16px">
+          <summary style="cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);outline:none;user-select:none">⚙ AI Engine Settings (Groq Cloud / Local Ollama)</summary>
+          <div style="margin-top:10px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;gap:10px">
+            <div>
+              <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">INFERENCE PROVIDER</label>
+              <select id="df-provider-select" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px">
+                <option value="groq" selected>Groq Cloud API (High-Speed ~150ms · Active)</option>
+                <option value="ollama">Ollama (100% Local Daemon at localhost:11434)</option>
+              </select>
+            </div>
+
+            <!-- Groq Settings -->
+            <div id="df-groq-block" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">GROQ API KEY</label>
+                <input type="password" id="df-groq-key" value="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" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+              </div>
+              <div>
+                <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">GROQ MODEL</label>
+                <input type="text" id="df-groq-model" value="qwen/qwen3.8-27b" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+              </div>
+            </div>
+
+            <!-- Ollama Settings -->
+            <div id="df-ollama-block" style="display:none;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">OLLAMA HOST</label>
+                <input type="text" id="df-ollama-host" value="http://localhost:11434" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+              </div>
+              <div>
+                <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">VISION MODEL</label>
+                <input type="text" id="df-ollama-model" value="gemma3:4b" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace" />
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">FRAME COUNT (3–16)</label>
+                <input type="number" id="df-frame-count" value="8" min="3" max="16" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
+              </div>
+              <div>
+                <label style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:'JetBrains Mono',monospace">TIMEOUT (seconds)</label>
+                <input type="number" id="df-timeout-s" value="60" min="15" max="300" style="width:100%;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px" />
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px">
+              <button class="btn btn-secondary" id="df-btn-test-conn" style="padding:7px 14px;font-size:12px">Test Connection</button>
+              <span id="df-conn-status" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text3)">Not tested</span>
+            </div>
+            <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:1.6">
+              When using Groq Cloud, frames are evaluated rapidly (~150ms). When using Ollama, set <code>OLLAMA_ORIGINS=chrome-extension://&lt;your-ext-id&gt;</code>.<br/>
+              For LAN GPU: use the host's LAN IP; restrict firewall to local subnet only.
+            </div>
+          </div>
+        </details>
+
+        <!-- Dropzone (image + video) -->
+        <div class="file-drop" id="df-file-drop">
+          <div class="file-drop-icon">🎬</div>
+          <p class="file-drop-text">Click to choose or drag &amp; drop image or video</p>
+          <p class="file-drop-hint">PNG, JPG, WebP, GIF · MP4, WebM, MOV · Max 10 MB image / 100 MB video</p>
+          <input type="file" id="df-file-input" accept="image/*,video/*" />
         </div>
 
+        <!-- Video player (hidden until video loaded) -->
+        <div id="df-video-wrap" style="display:none;margin-bottom:12px">
+          <video id="df-video-el" controls style="width:100%;max-height:280px;border-radius:8px;background:#000;border:1px solid var(--border)"></video>
+          <div id="df-video-meta" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-top:6px"></div>
+        </div>
+
+        <!-- Image preview (hidden until image loaded) -->
         <div class="img-preview" id="img-preview">
           <img id="img-preview-el" src="" alt="Preview" />
         </div>
 
-        <div style="text-align:center;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin:-4px 0">— OR ENTER ASSET URL —</div>
-
+        <!-- URL import -->
+        <div style="text-align:center;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin:4px 0">— OR ENTER MEDIA URL —</div>
         <div class="input-row">
-          <input type="url" id="img-url" placeholder="https://example.com/asset.jpg" />
+          <input type="url" id="img-url" placeholder="https://example.com/video.mp4 or image.jpg" />
           <button class="btn btn-secondary" id="btn-load-url" style="padding:10px 16px">Load</button>
         </div>
 
-        <button class="btn btn-primary" id="btn-deepfake">
-          🖼️ Inspect Media
-        </button>
+        <!-- Keyframe gallery (hidden until frames extracted) -->
+        <div id="df-frame-gallery" style="display:none;margin-bottom:14px">
+          <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-bottom:8px">EXTRACTED FRAMES</div>
+          <div id="df-frame-strip" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px"></div>
+        </div>
+
+        <!-- Scan button -->
+        <button class="btn btn-primary" id="btn-deepfake">🔬 Run Scan</button>
+
+        <!-- Progress -->
+        <div id="df-progress" style="display:none;margin-top:12px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div class="spinner"></div>
+            <div id="df-progress-msg" style="font-size:12.5px;font-weight:500;color:#fff;font-family:'JetBrains Mono',monospace">Starting…</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="df-step-badges">
+            <span id="df-step-extract" class="step-badge">1. Extract</span>
+            <span id="df-step-analyze" class="step-badge">2. Analyze</span>
+            <span id="df-step-aggregate" class="step-badge">3. Aggregate</span>
+          </div>
+        </div>
 
         <div class="result-area" id="deepfake-result"></div>
       </div>

@@ -13,6 +13,13 @@ import {
   inspectImageHeuristics,
   analyzePolicyLocal,
 } from "./heuristics.js";
+import { callVision, deepfakeHealthCheck } from "./deepfake/vision-client.js";
+import { aggregateFrameResults } from "./deepfake/aggregator.js";
+import { checkFrameConsistency_bg, extractVideoMetadata_bg, runMetadataHeuristics_bg } from "./deepfake/heuristics.js";
+import { classifyFrame } from "./deepfake/classifier-stub.js";
+import { getCache, setCache, computeCacheKey } from "./deepfake/cache.js";
+import { DEEPFAKE_CONFIG } from "./deepfake/config.js";
+import { DEEPFAKE_FRAME_PROMPT, DEEPFAKE_FRAME_SYSTEM } from "./deepfake/prompts.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATE & PERSISTENCE (MV3 Lifecycle Resilient)
@@ -580,6 +587,147 @@ async function handleImageScan({ imageUrl, imageData, filename, fileSize }, send
 // SYNCHRONOUS LISTENER REGISTRATION (MV3 Top-Level)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Deepfake handleVideoScan ──────────────────────────────────────────────────
+async function handleVideoScan(payload, port) {
+  const frames = payload?.frames || [];
+  if (!frames.length) {
+    port.postMessage({ type: 'error', error: 'No frames to analyze.' });
+    return;
+  }
+
+  const provider  = payload.provider || 'groq';
+  const apiKey    = payload.groqApiKey;
+  const groqModel = payload.groqModel || 'qwen/qwen3.8-27b';
+  const host      = payload.ollamaHost  || 'http://localhost:11434';
+  const model     = provider === 'groq' ? groqModel : (payload.ollamaModel || 'gemma3:4b');
+  const timeoutMs = payload.timeoutMs || (provider === 'groq' ? 30000 : 60000);
+  const isVideo   = Boolean(payload.isVideo);
+
+  // 1. Health check: verify model supports vision
+  const health = await deepfakeHealthCheck(host, model, provider, apiKey, groqModel);
+  const evidenceOnly = !health.ok;
+  const noVision     = health.status === 'model_no_vision';
+
+  // 2. Check cache
+  const cacheKey = computeCacheKey(
+    frames.map(f => f.base64.slice(0, 500)).join('|'),
+    model,
+    { host, provider }
+  );
+  const cached = await getCache(cacheKey);
+  if (cached) {
+    port.postMessage({ type: 'result', data: { success: true, result: { ...cached, fromCache: true } } });
+    return;
+  }
+
+  // 3. Run frame-by-frame LLM analysis (or skip if evidenceOnly)
+  const frameResults = [];
+  let consecutiveFails = 0;
+
+  if (!evidenceOnly) {
+    for (let i = 0; i < frames.length; i++) {
+      const frame = frames[i];
+      port.postMessage({ type: 'progress', data: { step: 'frame', current: i + 1, total: frames.length } });
+
+      try {
+        const llmRes = await callVision({
+          system: DEEPFAKE_FRAME_SYSTEM,
+          prompt: DEEPFAKE_FRAME_PROMPT(i, frames.length),
+          images: [frame.base64],
+          provider,
+          apiKey,
+          groqModel,
+          host,
+          model,
+          timeoutMs,
+        });
+
+        if (llmRes.success && llmRes.data) {
+          frameResults.push({ frameIndex: i, ...llmRes.data });
+          port.postMessage({
+            type: 'progress',
+            data: { step: 'frame', current: i + 1, total: frames.length, frameResult: llmRes.data }
+          });
+          consecutiveFails = 0;
+        } else {
+          frameResults.push({ frameIndex: i, artifacts: [], overall_suspicion: 0.5, notes: 'Analysis failed for this frame.' });
+          consecutiveFails++;
+          if (consecutiveFails >= 3) {
+            // Abort if 3 consecutive frames fail
+            logStage('DEEPFAKE', `Aborting: 3 consecutive frame failures. Last error: ${llmRes.error}`);
+            break;
+          }
+        }
+      } catch (err) {
+        frameResults.push({ frameIndex: i, artifacts: [], overall_suspicion: 0.5, notes: `Error: ${err.message}` });
+      }
+    }
+  }
+
+  // 4. Cross-frame consistency (code, not LLM)
+  port.postMessage({ type: 'progress', data: { step: 'aggregate' } });
+  const consistencyFlags = checkFrameConsistency_bg(frames);
+
+  // 5. Optional classifier
+  let classifierScores = [];
+  for (const frame of frames) {
+    const score = await classifyFrame(frame.base64).catch(() => null);
+    if (score !== null) classifierScores.push(score);
+  }
+  const classifierAvg = classifierScores.length > 0
+    ? classifierScores.reduce((a, b) => a + b, 0) / classifierScores.length
+    : null;
+
+  // 6. Metadata heuristics (bg version works without DOM)
+  const metaResult = runMetadataHeuristics_bg({
+    fileSize: payload.fileSize || 0,
+    filename: payload.filename || '',
+    isVideo,
+  });
+
+  // 7. Aggregate
+  const aggregated = aggregateFrameResults(
+    frameResults,
+    consistencyFlags,
+    metaResult.score,
+    classifierAvg,
+    DEEPFAKE_CONFIG
+  );
+
+  const finalResult = {
+    ...aggregated,
+    frameCount: frames.length,
+    framesAnalyzed: frameResults.length,
+    evidenceOnlyMode: evidenceOnly,
+    evidenceOnlyReason: evidenceOnly
+      ? (noVision
+          ? `Model "${model}" does not support image analysis. Run: ollama pull gemma3:4b`
+          : `Ollama offline. Start Ollama and run: ollama pull ${model}`)
+      : undefined,
+    suggestedModel: 'gemma3:4b',
+    modelUsed: evidenceOnly ? null : model,
+  };
+
+  // 8. Cache result
+  await setCache(cacheKey, finalResult);
+
+  port.postMessage({ type: 'result', data: { success: true, result: finalResult } });
+}
+
+// ── Deepfake scan via long-lived port (keeps SW alive during multi-frame analysis) ──
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'df-scan') return;
+
+  port.onMessage.addListener(async (msg) => {
+    if (msg.action !== 'SCAN_VIDEO_PORT') return;
+    try {
+      await handleVideoScan(msg.payload, port);
+    } catch (err) {
+      try { port.postMessage({ type: 'error', error: err?.message || 'Scan failed' }); } catch (_) {}
+    }
+  });
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const validation = validateMessage(message);
   if (!validation.valid) {
@@ -745,6 +893,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       });
       break;
 
+    case MESSAGE_ACTIONS.DF_HEALTH_CHECK: {
+      (async () => {
+        try {
+          const provider  = message.provider || 'groq';
+          const apiKey    = message.groqApiKey;
+          const groqModel = message.groqModel;
+          const host      = message.ollamaHost  || 'http://localhost:11434';
+          const model     = message.ollamaModel || 'gemma3:4b';
+          const health = await deepfakeHealthCheck(host, model, provider, apiKey, groqModel);
+          sendResponse(health);
+        } catch (err) {
+          sendResponse({ ok: false, status: 'error', message: err?.message || 'Health check failed' });
+        }
+      })();
+      break;
+    }
+
     default:
       sendResponse({ success: false, error: `Unhandled action: ${action}` });
       break;
@@ -820,6 +985,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: "ambient-policy",    title: "🛡️ Analyze Privacy Policy", contexts: ["page"] });
     chrome.contextMenus.create({ id: "ambient-factcheck", title: "🛡️ Ambient Shield: Check this text", contexts: ["selection"] });
+    chrome.contextMenus.create({ id: "ambient-deepfake-scan", title: "🛡️ Scan with Ambient Shield", contexts: ["image", "video"] });
     chrome.contextMenus.create({ id: "ambient-image",     title: "🛡️ Scan Image",              contexts: ["image"] });
   });
 });
@@ -866,9 +1032,64 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  if (info.menuItemId === "ambient-image") {
-    await chrome.storage.local.set({ pendingImageScan: { url: info.srcUrl || "", ts: Date.now() } });
-    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") + "?tab=deepfake" });
+  if (info.menuItemId === "ambient-deepfake-scan" || info.menuItemId === "ambient-image") {
+    const isVideo = info.mediaType === "video" || /\.(mp4|webm|ogg|mov|avi)(\?.*)?$/i.test(info.srcUrl || "");
+    const srcUrl = info.srcUrl || "";
+    let capturedFrame = null;
+    let captureError = null;
+
+    // Correction 9: Capture in content script from active playing <video> when allowed
+    if (tab?.id && isVideo) {
+      try {
+        const [{ result }] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: (targetSrc) => {
+            try {
+              const videos = Array.from(document.querySelectorAll("video"));
+              const video = videos.find(v => v.currentSrc === targetSrc || v.src === targetSrc) ||
+                            videos.find(v => !v.paused) ||
+                            videos[0];
+              if (!video || !video.videoWidth || !video.videoHeight) return { error: "NO_ACTIVE_VIDEO" };
+              const canvas = document.createElement("canvas");
+              const scale = 768 / Math.max(video.videoWidth, video.videoHeight);
+              const W = scale < 1 ? Math.round(video.videoWidth * scale) : video.videoWidth;
+              const H = scale < 1 ? Math.round(video.videoHeight * scale) : video.videoHeight;
+              canvas.width = W;
+              canvas.height = H;
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(video, 0, 0, W, H);
+              return { frame: canvas.toDataURL("image/jpeg", 0.8).split(",")[1] };
+            } catch (err) {
+              return { error: err.name === "SecurityError" ? "CORS_TAINTED" : (err?.message || "CANVAS_ERROR") };
+            }
+          },
+          args: [srcUrl],
+        });
+        if (result?.frame) capturedFrame = result.frame;
+        else if (result?.error) captureError = result.error;
+      } catch (_) {}
+    }
+
+    const pendingData = {
+      url: srcUrl,
+      isVideo,
+      capturedFrame,
+      captureError,
+      ts: Date.now(),
+      autorun: true,
+    };
+
+    if (chrome.storage?.session) {
+      await chrome.storage.session.set({
+        pendingVideoScan: isVideo ? pendingData : null,
+        pendingImageScan: !isVideo ? pendingData : null,
+      }).catch(() => {});
+    }
+    await chrome.storage.local.set({
+      pendingVideoScan: isVideo ? pendingData : null,
+      pendingImageScan: !isVideo ? pendingData : null,
+    });
+    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") + "?tab=deepfake&autorun=1" });
     return;
   }
 

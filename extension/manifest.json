@@ -1,4 +1,4 @@
-﻿{
+{
     "manifest_version":  3,
     "name":  "Ambient Shield",
     "version":  "1.0.0",
@@ -13,7 +13,7 @@
                         "declarativeNetRequest"
                     ],
     "host_permissions":  [
-                             "\u003call_urls\u003e",
+                             "<all_urls>",
                              "http://localhost:11434/*"
                          ],
     "declarative_net_request":  {
@@ -32,7 +32,7 @@
     "content_scripts":  [
                             {
                                 "matches":  [
-                                                "\u003call_urls\u003e"
+                                                "<all_urls>"
                                             ],
                                 "js":  [
                                            "content-firewall.js"
@@ -44,7 +44,7 @@
                             },
                             {
                                 "matches":  [
-                                                "\u003call_urls\u003e"
+                                                "<all_urls>"
                                             ],
                                 "js":  [
                                            "content.js"
@@ -96,7 +96,7 @@
                                                            "*.ico"
                                                        ],
                                          "matches":  [
-                                                         "\u003call_urls\u003e"
+                                                         "<all_urls>"
                                                      ]
                                      }
                                  ],

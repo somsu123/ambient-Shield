@@ -96,13 +96,22 @@ Ambient Shield provides a single unified scanner in the **Fact Checker** tab tha
 
 ---
 
-### 🖼️ Deepfake & Forensic Image Scanner
-- **Realistic Forensic Disclaimers:** General text and multimodal LLMs cannot conclusively prove deepfakes. Ambient Shield makes this clear: all results include explicit confidence ratings and non-conclusive disclaimers.
-- **Multi-Layer Heuristics:**
-  - File format and dimensional integrity checks (10MB limit, auto-resizing to prevent browser hangs)
-  - Known generative AI filename tags (`midjourney`, `dall-e`, `stablediffusion`, `flux`, `comfyui`)
-  - Explicit / adult content filename and path indicators
-  - Optional local Gemma multimodal analysis for visual anomalies (lighting inconsistency, blending artifacts).
+### 🎬 Deepfake & Video Scanner (Image + Video)
+- **Dual-Runtime Forensic Pipeline:** Browser tab extracts adaptive keyframes (HTML5 video + canvas) while the MV3 service worker orchestrates inference and 24h persistent LRU caching (`DEEPFAKE_VIDEO_GUIDE.md`).
+- **Multimodal Visual Inspection:** Uses local Ollama vision models (defaults to `gemma3:4b`; `gemma3:12b` for GPUs) to inspect per-frame synthesis artifacts:
+  - Facial skin and texture over-smoothing (GAN/diffusion waxy finish)
+  - Edge blending and face-swap boundaries around jawline, chin, and hairline
+  - Conflicting directional lighting and shadow angles
+  - Asymmetric specular reflections in eyes
+  - Distortions in teeth, ears, eyewear, and jewelry
+  - Background warping or spatial bleed directly adjacent to subjects
+- **Algorithmic Cross-Frame Consistency:** Code-driven pixel continuity metrics (luminance and contrast spread) detect abrupt splicing between frames.
+- **Calibrated Verdicts & Honest Capabilities:**
+  - Emits calibrated verdicts: **Likely authentic**, **Inconclusive**, or **Possible manipulation** with confidence ratings.
+  - Never emits hard unscientific claims like "DEEPFAKE" or numeric "blinks/min" from static keyframes.
+  - Mandatory visible disclaimer: *"Indicative only, not forensic proof."*
+- **Evidence-Only Fallback:** When Ollama is offline or a text-only model is selected, runs container heuristics and pixel metrics with clear remediation instructions.
+- **Pluggable Classifier Interface:** Optional provider stub (`extension/deepfake/classifier-stub.js`) for dedicated ONNX or local microservice classifiers.
 
 ---
 
@@ -116,33 +125,45 @@ Ambient Shield provides a single unified scanner in the **Fact Checker** tab tha
 
 ## 💻 Local AI Setup (Ollama)
 
-Ambient Shield uses **Ollama** running locally on your computer with Google's open **Gemma** model.
+Ambient Shield uses **Ollama** running locally on your computer with Google's multimodal **Gemma 3** model.
 
 ### 1. Install Ollama
 Download and install Ollama from [ollama.com](https://ollama.com/download).
 
-### 2. Pull the Recommended Model
-In your terminal, pull `gemma3:4b` (recommended balance of reasoning speed and accuracy) or `gemma2:2b` (lightweight):
+### 2. Pull the Recommended Multimodal Model
+The deepfake and image scanner requires a multimodal vision model. Text-only models (`gemma:2b`, `gemma2`) cannot process image frames:
 
 ```bash
+# Recommended default (multimodal vision + text, ~4GB VRAM):
 ollama pull gemma3:4b
+
+# For dedicated desktop GPUs with ≥10GB VRAM:
+ollama pull gemma3:12b
 ```
 
-### 3. Configure Extension Origin Access
-Because Chrome extensions communicate from a unique origin (`chrome-extension://<id>`), Ollama must be launched with `OLLAMA_ORIGINS` enabled.
+### 3. Configure Secure Extension Origin Access
+Because Chrome extensions communicate from a unique origin (`chrome-extension://<id>`), Ollama must be launched with your specific extension origin. Find your extension ID at `chrome://extensions`.
+
+> [!CAUTION]
+> Never use wildcard `OLLAMA_ORIGINS="*"` on shared or public networks. Ollama does not include authentication.
 
 #### Windows (PowerShell):
 ```powershell
-$env:OLLAMA_ORIGINS = "chrome-extension://*"
+$env:OLLAMA_ORIGINS = "chrome-extension://<your-extension-id>"
 ollama serve
 ```
 
-#### macOS:
+#### macOS / Linux:
 ```bash
-launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"
-# Or run in terminal:
-OLLAMA_ORIGINS="chrome-extension://*" ollama serve
+OLLAMA_ORIGINS="chrome-extension://<your-extension-id>" ollama serve
 ```
+
+#### LAN GPU Server (Scenario B):
+If running Ollama on a dedicated machine on your local network:
+```bash
+OLLAMA_HOST="0.0.0.0:11434" OLLAMA_ORIGINS="chrome-extension://<your-extension-id>" ollama serve
+```
+*Ensure host firewall rules restrict port `11434` strictly to your local subnet (e.g. `192.168.1.0/24`).*
 
 #### Linux:
 ```bash

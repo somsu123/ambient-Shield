@@ -18,6 +18,9 @@ export const MESSAGE_ACTIONS = {
   VERIFY_PARENTAL_PIN: "VERIFY_PARENTAL_PIN",
   SET_PARENTAL_PIN: "SET_PARENTAL_PIN",
   PING: "PING",
+  SCAN_VIDEO: "SCAN_VIDEO",         // new: multi-frame deepfake scan
+  DF_HEALTH_CHECK: "DF_HEALTH_CHECK", // deepfake-specific health check
+  SCAN_VIDEO_PORT: "SCAN_VIDEO_PORT", // handled via port (not onMessage)
 };
 
 /**
@@ -55,6 +58,11 @@ export function validateMessage(msg) {
     if (!msg.imageUrl && !msg.imageData) {
       return { valid: false, error: "SCAN_IMAGE requires imageUrl or imageData." };
     }
+  }
+
+  if (action === MESSAGE_ACTIONS.DF_HEALTH_CHECK) {
+    // ollamaHost and ollamaModel are optional (fall back to stored settings)
+    // No required fields
   }
 
   return { valid: true, action };
